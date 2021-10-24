@@ -5,6 +5,7 @@
 
 #include "SmoothSql.h"
 #include "SqliteDatabase.h"
+#include "SqliteTransaction.h"
 
 
 USqliteDatabase* UDatabaseSingleton::CreateConnection(const FSqliteDBConnectionParms& Parms) const
@@ -27,6 +28,12 @@ USqliteDatabase* UDatabaseSingleton::CreateConnection(const FSqliteDBConnectionP
 
 	return CurrentDatabase;
 }
+
+USqliteTransaction* UDatabaseSingleton::StartTransaction(USqliteDatabase* Connection)
+{
+
+}
+
 
 void UDatabaseSingleton::CloseConnection(USqliteDatabase* DB)
 {

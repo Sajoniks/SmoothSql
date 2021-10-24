@@ -751,7 +751,7 @@ private:
      *
      * @param[in] aRet SQLite return code to test against the SQLITE_OK expected value
      */
-    void check(const int aRet) const
+    void check_sqlite_result(const int aRet) const
     {
         if (SQLite::OK != aRet)
         {

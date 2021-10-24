@@ -8,6 +8,9 @@ DEFINE_LOG_CATEGORY(LogSmoothSqlite)
 
 void FSmoothSqlModule::StartupModule()
 {
+#if WITH_EDITOR
+	FModuleManager::Get().LoadModuleChecked("SmoothSqlEditor");
+#endif
 }
 
 void FSmoothSqlModule::ShutdownModule()

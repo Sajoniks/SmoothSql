@@ -5,28 +5,15 @@
 #include "CoreMinimal.h"
 #include "UObject/NoExportTypes.h"
 #include "Data/SmoothSqliteDataTypes.h"
-
-#pragma push_macro("check")
-#undef check
-
 #include "SQLiteCpp/Database.h"
-
-#pragma pop_macro("check")
 
 
 #include "SqliteDatabase.generated.h"
 
 
-UENUM(BlueprintType)
-enum class ESqlStatementResult : uint8
-{
-	Then,
-	Done,
-	Error
-};
-
 
 class UDatabaseSingleton;
+class USqliteStatement;
 
 UCLASS(BlueprintType)
 class SMOOTHSQL_API USqliteDatabase : public UObject
@@ -57,11 +44,19 @@ public:
 	bool HasValidConnection() const;
 
 	/**
-	 * Execute SQL statement (Async)
+	 * Get wrapped sqlite database connection
+	 * @return Ptr to SQLite::Database
 	 */
-	UFUNCTION(BlueprintCallable, meta = (ExpandEnumAsExecs = "StatementResult", Latent, WorldContext="WorldContextObject", LatentInfo = "LatentInfo"), Category="SmoothSqlite|Query")
-	void ExecuteAsync(UObject* WorldContextObject, struct FLatentActionInfo LatentInfo, ESqlStatementResult& StatementResult);
+	SQLite::Database* GetDatabaseConnection() const;
 
+	/**
+	 * Create query (returns values)
+	 * @param [in] QueryString SQL query string
+	 * @return Statement object
+	 */
+	UFUNCTION(BlueprintCallable, Category = "SmoothSqlite|Query")
+	USqliteStatement* CreateQuery(const FString& QueryString);
+	
 	
 	virtual ~USqliteDatabase() override;
 

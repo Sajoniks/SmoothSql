@@ -472,12 +472,12 @@ public:
     /**
      * @brief Check if aRet equal SQLITE_OK, else throw a SQLite::Exception with the SQLite error message
      */
-    void check(const int aRet) const
+    void check_sqlite_result(const int aRet) const
     {
-      if (SQLite::OK != aRet)
-      {
-       throw SQLite::Exception(getHandle(), aRet);
-      }
+        if (SQLite::OK != aRet)
+        {
+            throw SQLite::Exception(getHandle(), aRet);
+        }
     }
 
 private:

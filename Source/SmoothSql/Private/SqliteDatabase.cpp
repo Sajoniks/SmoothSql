@@ -3,6 +3,7 @@
 
 #include "SqliteDatabase.h"
 #include "SmoothSql.h"
+#include "SqliteStatement.h"
 #include "Kismet/KismetSystemLibrary.h"
 #include "Subsystem/DatabaseSingleton.h"
 
@@ -15,6 +16,8 @@ USqliteDatabase::USqliteDatabase(const FObjectInitializer& ObjectInitializer)
 	{
 		Singleton = GEngine ? GEngine->GetEngineSubsystem<UDatabaseSingleton>() : nullptr;
 	}
+
+	
 }
 
 bool USqliteDatabase::InitConnection(const FSqliteDBConnectionParms& Params)
@@ -69,18 +72,28 @@ bool USqliteDatabase::HasValidConnection() const
 	return Database ? bool ( Database->getHandle() ) : ( false );
 }
 
-void USqliteDatabase::ExecuteAsync(UObject* WorldContextObject, FLatentActionInfo LatentInfo,
-	ESqlStatementResult& StatementResult)
+SQLite::Database* USqliteDatabase::GetDatabaseConnection() const
 {
-	if (auto World = GEngine->GetWorldFromContextObject(WorldContextObject, EGetWorldErrorMode::ReturnNull))
+	return Database.Get();
+}
+
+USqliteStatement* USqliteDatabase::CreateQuery(const FString& QueryString)
+{
+	if (HasValidConnection())
 	{
-		FLatentActionManager& Manager = World->GetLatentActionManager();
-		// if (Manager.FindExistingAction<>(LatentInfo.CallbackTarget,LatentInfo.UUID) == nullptr)
+		// Create statement object
+		auto Statement = NewObject<USqliteStatement>(this);
+
+		// If was init without errors, we can return it
+		if (Statement->InitQuery(this, QueryString))
 		{
-			// Manager.AddNewAction(LatentInfo.CallbackTarget, LatentInfo.UUID, )
+			return Statement;	
 		}
 	}
+
+	return nullptr;
 }
+
 
 USqliteDatabase::~USqliteDatabase()
 {

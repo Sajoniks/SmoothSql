@@ -100,14 +100,14 @@ void Database::Deleter::operator()(sqlite3* apSQLite)
 void Database::setBusyTimeout(const int aBusyTimeoutMs)
 {
     const int ret = sqlite3_busy_timeout(getHandle(), aBusyTimeoutMs);
-    check(ret);
+    check_sqlite_result(ret);
 }
 
 // Shortcut to execute one or multiple SQL statements without results (UPDATE, INSERT, ALTER, COMMIT, CREATE...).
 int Database::exec(const char* apQueries)
 {
     const int ret = sqlite3_exec(getHandle(), apQueries, nullptr, nullptr, nullptr);
-    check(ret);
+    check_sqlite_result(ret);
 
     // Return the number of rows modified by those SQL statements (INSERT, UPDATE or DELETE only)
     return sqlite3_changes(getHandle());
@@ -184,7 +184,7 @@ void Database::createFunction(const char*   apFuncName,
     }
     const int ret = sqlite3_create_function_v2(getHandle(), apFuncName, aNbArg, textRep,
                                                apApp, apFunc, apStep, apFinal, apDestroy);
-    check(ret);
+    check_sqlite_result(ret);
 }
 
 // Load an extension into the sqlite database. Only affects the current connection.
@@ -208,10 +208,10 @@ void Database::loadExtension(const char* apExtensionName, const char *apEntryPoi
 #else
     int ret = sqlite3_enable_load_extension(getHandle(), 1);
 #endif
-    check(ret);
+    check_sqlite_result(ret);
 
     ret = sqlite3_load_extension(getHandle(), apExtensionName, apEntryPointName, 0);
-    check(ret);
+    check_sqlite_result(ret);
 #endif
 }
 
@@ -426,9 +426,5 @@ void Database::backup(const char* apFilename, BackupType aType)
 
     // RAII Finish Backup an Close the other Database
 }
-
-
-
-
 
 }  // namespace SQLite

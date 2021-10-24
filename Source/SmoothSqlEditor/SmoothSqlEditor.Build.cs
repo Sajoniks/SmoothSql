@@ -28,7 +28,11 @@ public class SmoothSqlEditor : ModuleRules
 				"Core",
 				"CoreUObject",
 				"SmoothSql",
-				"Projects", "Engine"
+				"Projects", 
+				"Engine",
+				"BlueprintGraph",
+				"UnrealEd",
+				"KismetCompiler"
 				// ... add other public dependencies that you statically link with here ...
 			}
 			);

@@ -12,7 +12,7 @@ public class SqliteCpp : ModuleRules
 
 		if (Target.Platform == UnrealTargetPlatform.Win64)
 		{
-			string PluginPath = Utils.MakePathRelativeTo(ModuleDirectory, Target.RelativeEnginePath);
+			string PluginPath = ModuleDirectory;
 			Console.WriteLine("SqliteCpp Path: " + PluginPath);
 			
 			PublicIncludePaths.Add(Path.Combine(PluginPath, "include"));

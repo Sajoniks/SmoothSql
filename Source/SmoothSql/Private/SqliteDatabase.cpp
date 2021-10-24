@@ -16,8 +16,6 @@ USqliteDatabase::USqliteDatabase(const FObjectInitializer& ObjectInitializer)
 	{
 		Singleton = GEngine ? GEngine->GetEngineSubsystem<UDatabaseSingleton>() : nullptr;
 	}
-
-	
 }
 
 bool USqliteDatabase::InitConnection(const FSqliteDBConnectionParms& Params)

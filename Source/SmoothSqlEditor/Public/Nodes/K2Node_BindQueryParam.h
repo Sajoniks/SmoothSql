@@ -34,8 +34,6 @@ public:
 	virtual void ValidateNodeDuringCompilation(FCompilerResultsLog& MessageLog) const override;
 	virtual void PinTypeChanged(UEdGraphPin* Pin) override;
 	virtual void ReconstructNode() override;
-	
 	void PinConnectionListChanged(UEdGraphPin* Pin) override;
-
 	virtual void ExpandNode(FKismetCompilerContext& CompilerContext, UEdGraph* SourceGraph) override;
 };

@@ -50,7 +50,7 @@ public:
 	SQLite::Database* GetDatabaseConnection() const;
 
 	/**
-	 * Create query (returns values)
+	 * Create query
 	 * @param [in] QueryString SQL query string
 	 * @return Statement object
 	 */

@@ -27,11 +27,25 @@ public:
 	bool InitQuery(USqliteDatabase* Connection, const FString& Query);
 
 	/**
-	 * Execute query without result set
+	 * Execute one-step query without result set
 	 * @return True, if successful execution
 	 */
+	UFUNCTION(BlueprintCallable, Category="SmoothSqlite|Statement", meta=(DisplayName="Execute (No Result)"))
+	bool Execute_OneStep();
+
+	/**
+	 * Execute query step 
+	 * @return True, if successful execution
+	 */
+	UFUNCTION(BlueprintCallable, Category="SmoothSqlite|Statement", meta=(DisplayName="StepQuery"))
+	bool Step();
+	
+	/**
+	 * Check if result set is exhausted
+	 * @return true, if can fetch more
+	 */
 	UFUNCTION(BlueprintCallable, Category="SmoothSqlite|Statement")
-	bool Execute();
+	bool IsDone() const;
 
 	SQLite::Statement* GetStatement() const;
 

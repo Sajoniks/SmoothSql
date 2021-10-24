@@ -32,7 +32,8 @@ public class SmoothSqlEditor : ModuleRules
 				"Engine",
 				"BlueprintGraph",
 				"UnrealEd",
-				"KismetCompiler"
+				"KismetCompiler",
+				"SlateCore"
 				// ... add other public dependencies that you statically link with here ...
 			}
 			);

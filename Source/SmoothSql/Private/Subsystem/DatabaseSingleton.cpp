@@ -29,10 +29,6 @@ USqliteDatabase* UDatabaseSingleton::CreateConnection(const FSqliteDBConnectionP
 	return CurrentDatabase;
 }
 
-USqliteTransaction* UDatabaseSingleton::StartTransaction(USqliteDatabase* Connection)
-{
-
-}
 
 
 void UDatabaseSingleton::CloseConnection(USqliteDatabase* DB)

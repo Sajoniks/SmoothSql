@@ -31,7 +31,7 @@ bool USqliteStatement::InitQuery(USqliteDatabase* Connection, const FString& Que
 	return false;
 }
 
-bool USqliteStatement::Execute()
+bool USqliteStatement::Execute_OneStep()
 {
 	try
 	{
@@ -48,6 +48,29 @@ bool USqliteStatement::Execute()
 
 	return false;
 }
+
+bool USqliteStatement::Step()
+{
+	try
+	{
+		if (Statement)
+		{
+			return Statement->executeStep();
+		}
+	}
+	catch (SQLite::Exception& e)
+	{
+		UE_LOG(LogSmoothSqlite, Error, L"%s", *FString(e.getErrorStr()))
+	}
+	
+	return false;
+}
+
+bool USqliteStatement::IsDone() const
+{
+	return Statement ? Statement->isDone() : false;
+}
+
 
 SQLite::Statement* USqliteStatement::GetStatement() const
 {

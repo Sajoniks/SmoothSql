@@ -114,7 +114,7 @@ int32 USmoothSqlFunctionLibrary::GetInt(USqliteStatement* Target, const FString&
 	}
 	catch (const SQLite::Exception& e)
 	{
-		UE_LOG(LogSmoothSqlite, Error, L"Error retrieving column: %s", *FString(e.getErrorStr()));
+		UE_LOG(LogSmoothSqlite, Error, L"Error retrieving column: %s (%d)", *FString(e.getErrorStr()), e.getErrorCode());
 		return int32{};
 	}
 }
@@ -133,7 +133,7 @@ int64 USmoothSqlFunctionLibrary::GetInt64(USqliteStatement* Target, const FStrin
 	}
 	catch (const SQLite::Exception& e)
 	{
-		UE_LOG(LogSmoothSqlite, Error, L"Error retrieving column: %s", *FString(e.getErrorStr()));
+		UE_LOG(LogSmoothSqlite, Error, L"Error retrieving column: %s (%d)", *FString(e.getErrorStr()), e.getErrorCode());
 		return int64{};
 	}
 }
@@ -151,7 +151,7 @@ float USmoothSqlFunctionLibrary::GetFloat(USqliteStatement* Target, const FStrin
 	}
 	catch (const SQLite::Exception& e)
 	{
-		UE_LOG(LogSmoothSqlite, Error, L"Error retrieving column: %s", *FString(e.getErrorStr()));
+		UE_LOG(LogSmoothSqlite, Error, L"Error retrieving column: %s (%d)", *FString(e.getErrorStr()), e.getErrorCode());
 		return float{};
 	}
 }
@@ -169,7 +169,18 @@ FString USmoothSqlFunctionLibrary::GetString(USqliteStatement* Target, const FSt
 	}
 	catch (const SQLite::Exception& e)
 	{
-		UE_LOG(LogSmoothSqlite, Error, L"Error retrieving column: %s", *FString(e.getErrorStr()));
+		UE_LOG(LogSmoothSqlite, Error, L"Error retrieving column: %s (%d)", *FString(e.getErrorStr()), e.getErrorCode());
 		return FString{};
 	}
 }
+
+USqliteStatement* USmoothSqlFunctionLibrary::K2_StepStatement(USqliteStatement* Target, bool& Success)
+{
+	if (Target)
+	{
+		Success = Target->Step();
+	}
+
+	return Target;
+}
+

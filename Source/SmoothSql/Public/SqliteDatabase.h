@@ -56,7 +56,16 @@ public:
 	 */
 	UFUNCTION(BlueprintCallable, Category = "SmoothSqlite|Query")
 	USqliteStatement* CreateQuery(const FString& QueryString);
-	
+
+	/**
+	 * Execute query without result set
+	 * @param [in] Query Query to execute
+	 * @return True if successful
+	 * @note Multiple statements can be separated with ";"
+	 */
+	UFUNCTION(BlueprintCallable, Category = "SmoothSqlite|Query", meta=(DisplayName="Execute (No Result)"))
+	bool Execute_OneStep(const FString& Query);
+		
 	
 	virtual ~USqliteDatabase() override;
 

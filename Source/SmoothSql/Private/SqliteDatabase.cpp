@@ -92,6 +92,24 @@ USqliteStatement* USqliteDatabase::CreateQuery(const FString& QueryString)
 	return nullptr;
 }
 
+bool USqliteDatabase::Execute_OneStep(const FString& Query)
+{
+	if (HasValidConnection())
+	{
+		try
+		{
+			Database->exec(TCHAR_TO_UTF8(*Query));
+			return true;
+		}
+		catch (SQLite::Exception& e)
+		{
+			UE_LOG(LogSmoothSqlite, Error, L"%s", *FString(e.getErrorStr()))
+		}
+	}
+
+	return false;
+}
+
 
 USqliteDatabase::~USqliteDatabase()
 {

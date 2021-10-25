@@ -38,7 +38,7 @@ bool USqliteDatabase::InitConnection(const FSqliteDBConnectionParms& Params)
 		// Try to open DB
 		try
 		{
-			Database.Reset(new SQLite::Database(TCHAR_TO_UTF8(*DBDir), SQLite::OPEN_READWRITE, Params.BusyTimeout));
+			Database.Reset(new SQLite::Database(std::string(TCHAR_TO_UTF8(*DBDir)), SQLite::OPEN_READWRITE, Params.BusyTimeout));
 			UE_LOG(LogSmoothSqlite, Display, L"Opened database '%s', located '%s'", *DBName, *DBDir);
 			return true;
 		}
@@ -98,7 +98,7 @@ bool USqliteDatabase::Execute_OneStep(const FString& Query)
 	{
 		try
 		{
-			Database->exec(TCHAR_TO_UTF8(*Query));
+			Database->exec(std::string(TCHAR_TO_UTF8(*Query)));
 			return true;
 		}
 		catch (SQLite::Exception& e)

@@ -13,7 +13,7 @@ bool USqliteStatement::InitQuery(USqliteDatabase* Connection, const FString& Que
 		try
 		{
 			// Convert
-			const char* QueryStr = TCHAR_TO_UTF8(*Query);
+			std::string QueryStr = TCHAR_TO_UTF8(*Query);
 			// Get Connection
 			SQLite::Database& Con = *Connection->GetDatabaseConnection();
 				

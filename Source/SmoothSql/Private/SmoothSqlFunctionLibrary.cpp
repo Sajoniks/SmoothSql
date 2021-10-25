@@ -17,7 +17,7 @@ void USmoothSqlFunctionLibrary::K2_BindQueryParam_Int(USqliteStatement* Target, 
 
 	
 	auto& sqlStatement = *Target->GetStatement();
-	const char* c_ParamName = TCHAR_TO_UTF8(*(":" + Param));
+	std::string c_ParamName = ":" + std::string(TCHAR_TO_UTF8(*Param));
 
 	 try
 	 {
@@ -36,7 +36,7 @@ void USmoothSqlFunctionLibrary::K2_BindQueryParam_Int64(USqliteStatement* Target
 
 
 	auto& sqlStatement = *Target->GetStatement();
-	const char* c_ParamName = TCHAR_TO_UTF8(*(":" + Param));
+	std::string c_ParamName = ":" + std::string(TCHAR_TO_UTF8(*Param));
 	
 	try
 	{
@@ -56,7 +56,7 @@ void USmoothSqlFunctionLibrary::K2_BindQueryParam_Float(USqliteStatement* Target
 
 	
 	auto& sqlStatement = *Target->GetStatement();
-	const char* c_ParamName = TCHAR_TO_UTF8(*(":" + Param));
+	std::string c_ParamName = ":" + std::string(TCHAR_TO_UTF8(*Param));
 
 	try
 	{
@@ -75,8 +75,8 @@ void USmoothSqlFunctionLibrary::K2_BindQueryParam_String(USqliteStatement* Targe
 	if (!Target) return;
 	
 	auto& sqlStatement = *Target->GetStatement();
-	const char* c_ParamName = TCHAR_TO_UTF8(*(":" + Param));
-	const char* c_Val = TCHAR_TO_UTF8(*Value);
+	std::string c_ParamName = ":" + std::string(TCHAR_TO_UTF8(*Param));
+	std::string c_Val = std::string(TCHAR_TO_UTF8(*Value));
 	
 	try
 	{
@@ -106,11 +106,11 @@ int32 USmoothSqlFunctionLibrary::GetInt(USqliteStatement* Target, const FString&
 	if (!Target) return int32{};
 
 	auto& sqlStatement = *Target->GetStatement();
-	const char* ColName = TCHAR_TO_UTF8(*Column);
+	std::string ColName = TCHAR_TO_UTF8(*Column);
 
 	try
 	{
-		return sqlStatement.getColumn(ColName).getInt();
+		return sqlStatement.getColumn(ColName.c_str()).getInt();
 	}
 	catch (const SQLite::Exception& e)
 	{
@@ -124,12 +124,12 @@ int64 USmoothSqlFunctionLibrary::GetInt64(USqliteStatement* Target, const FStrin
 	if (!Target) return int64{};
 
 	auto& sqlStatement = *Target->GetStatement();
-	const char* ColName = TCHAR_TO_UTF8(*Column);
+	std::string ColName = TCHAR_TO_UTF8(*Column);
 
 	
 	try
 	{
-		return sqlStatement.getColumn(ColName).getInt64();
+		return sqlStatement.getColumn(ColName.c_str()).getInt64();
 	}
 	catch (const SQLite::Exception& e)
 	{
@@ -143,11 +143,11 @@ float USmoothSqlFunctionLibrary::GetFloat(USqliteStatement* Target, const FStrin
 	if (!Target) return float{};
 
 	auto& sqlStatement = *Target->GetStatement();
-	const char* ColName = TCHAR_TO_UTF8(*Column);
+	std::string ColName = TCHAR_TO_UTF8(*Column);
 	
 	try
 	{
-		return sqlStatement.getColumn(ColName).getDouble();
+		return sqlStatement.getColumn(ColName.c_str()).getDouble();
 	}
 	catch (const SQLite::Exception& e)
 	{
@@ -161,11 +161,11 @@ FString USmoothSqlFunctionLibrary::GetString(USqliteStatement* Target, const FSt
 	if (!Target) return FString{};
 
 	auto& sqlStatement = *Target->GetStatement();
-	const char* ColName = TCHAR_TO_UTF8(*Column);
+	std::string ColName = TCHAR_TO_UTF8(*Column);
 	
 	try
 	{
-		return FString(UTF8_TO_TCHAR( sqlStatement.getColumn(ColName).getString().c_str() ));
+		return FString(UTF8_TO_TCHAR( sqlStatement.getColumn(ColName.c_str()).getString().c_str() ));
 	}
 	catch (const SQLite::Exception& e)
 	{

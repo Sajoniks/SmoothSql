@@ -3,7 +3,7 @@
  * @ingroup SQLiteCpp
  * @brief   Management of a SQLite Database Connection.
  *
- * Copyright (c) 2012-2020 Sebastien Rombauts (sebastien.rombauts@gmail.com)
+ * Copyright (c) 2012-2021 Sebastien Rombauts (sebastien.rombauts@gmail.com)
  *
  * Distributed under the MIT License (MIT) (See accompanying file LICENSE.txt
  * or copy at http://opensource.org/licenses/MIT)
@@ -27,11 +27,20 @@
 namespace SQLite
 {
 
-const int   OPEN_READONLY   = SQLITE_OPEN_READONLY;
-const int   OPEN_READWRITE  = SQLITE_OPEN_READWRITE;
-const int   OPEN_CREATE     = SQLITE_OPEN_CREATE;
-const int   OPEN_URI        = SQLITE_OPEN_URI;
-const int   OPEN_FULLMUTEX  = SQLITE_OPEN_FULLMUTEX;
+const int   OPEN_READONLY     = SQLITE_OPEN_READONLY;
+const int   OPEN_READWRITE    = SQLITE_OPEN_READWRITE;
+const int   OPEN_CREATE       = SQLITE_OPEN_CREATE;
+const int   OPEN_URI          = SQLITE_OPEN_URI;
+const int   OPEN_MEMORY       = SQLITE_OPEN_MEMORY;
+const int   OPEN_NOMUTEX      = SQLITE_OPEN_NOMUTEX;
+const int   OPEN_FULLMUTEX    = SQLITE_OPEN_FULLMUTEX;
+const int   OPEN_SHAREDCACHE  = SQLITE_OPEN_SHAREDCACHE;
+const int   OPEN_PRIVATECACHE = SQLITE_OPEN_PRIVATECACHE;
+#if SQLITE_VERSION_NUMBER >= 3031000
+const int   OPEN_NOFOLLOW     = SQLITE_OPEN_NOFOLLOW;
+#else
+const int   OPEN_NOFOLLOW     = 0;
+#endif
 
 const int   OK              = SQLITE_OK;
 
@@ -100,17 +109,23 @@ void Database::Deleter::operator()(sqlite3* apSQLite)
 void Database::setBusyTimeout(const int aBusyTimeoutMs)
 {
     const int ret = sqlite3_busy_timeout(getHandle(), aBusyTimeoutMs);
-    check_sqlite_result(ret);
+    sqlitecpp_check(ret);
 }
 
 // Shortcut to execute one or multiple SQL statements without results (UPDATE, INSERT, ALTER, COMMIT, CREATE...).
+// Return the number of changes.
 int Database::exec(const char* apQueries)
 {
-    const int ret = sqlite3_exec(getHandle(), apQueries, nullptr, nullptr, nullptr);
-    check_sqlite_result(ret);
+    const int ret = tryExec(apQueries);
+    sqlitecpp_check(ret);
 
     // Return the number of rows modified by those SQL statements (INSERT, UPDATE or DELETE only)
     return sqlite3_changes(getHandle());
+}
+
+int Database::tryExec(const char* apQueries) noexcept
+{
+    return sqlite3_exec(getHandle(), apQueries, nullptr, nullptr, nullptr);
 }
 
 // Shortcut to execute a one step query and fetch the first column of the result.
@@ -139,6 +154,12 @@ bool Database::tableExists(const char* apTableName)
 long long Database::getLastInsertRowid() const noexcept
 {
     return sqlite3_last_insert_rowid(getHandle());
+}
+
+// Get number of rows modified by last INSERT, UPDATE or DELETE statement (not DROP table).
+int Database::getChanges() const noexcept
+{
+    return sqlite3_changes(getHandle());
 }
 
 // Get total number of rows modified by all INSERT, UPDATE or DELETE statement since connection.
@@ -184,7 +205,7 @@ void Database::createFunction(const char*   apFuncName,
     }
     const int ret = sqlite3_create_function_v2(getHandle(), apFuncName, aNbArg, textRep,
                                                apApp, apFunc, apStep, apFinal, apDestroy);
-    check_sqlite_result(ret);
+    sqlitecpp_check(ret);
 }
 
 // Load an extension into the sqlite database. Only affects the current connection.
@@ -208,10 +229,10 @@ void Database::loadExtension(const char* apExtensionName, const char *apEntryPoi
 #else
     int ret = sqlite3_enable_load_extension(getHandle(), 1);
 #endif
-    check_sqlite_result(ret);
+    sqlitecpp_check(ret);
 
     ret = sqlite3_load_extension(getHandle(), apExtensionName, apEntryPointName, 0);
-    check_sqlite_result(ret);
+    sqlitecpp_check(ret);
 #endif
 }
 
@@ -310,7 +331,8 @@ Header Database::getHeaderInfo(const std::string& aFilename)
     }
 
     // If the "magic string" can't be found then header is invalid, corrupt or unreadable
-    strncpy(pHeaderStr, pBuf, 16);
+    memcpy(pHeaderStr, pBuf, 16);
+    pHeaderStr[15] = '\0';
     if (strncmp(pHeaderStr, "SQLite format 3", 15) != 0)
     {
         throw SQLite::Exception("Invalid or encrypted SQLite header in file " + aFilename);

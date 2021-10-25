@@ -3,7 +3,7 @@
  * @ingroup SQLiteCpp
  * @brief   Management of a SQLite Database Connection.
  *
- * Copyright (c) 2012-2020 Sebastien Rombauts (sebastien.rombauts@gmail.com)
+ * Copyright (c) 2012-2021 Sebastien Rombauts (sebastien.rombauts@gmail.com)
  *
  * Distributed under the MIT License (MIT) (See accompanying file LICENSE.txt
  * or copy at http://opensource.org/licenses/MIT)
@@ -11,6 +11,28 @@
 #pragma once
 
 #include <SQLiteCpp/Column.h>
+
+// c++17: MinGW GCC version > 8
+// c++17: Visual Studio 2017 version 15.7
+// c++17: macOS unless targetting compatibility with macOS < 10.15
+#if __cplusplus >= 201703L
+    #if defined(__MINGW32__) || defined(__MINGW64__)
+        #if __GNUC__ > 8 // MinGW requires GCC version > 8 for std::filesystem
+            #define SQLITECPP_HAVE_STD_FILESYSTEM
+        #endif
+    #elif defined(__MAC_OS_X_VERSION_MIN_REQUIRED) && __MAC_OS_X_VERSION_MIN_REQUIRED < 101500
+        // macOS clang won't less us touch std::filesystem if we're targetting earlier than 10.15
+    #else
+        #define SQLITECPP_HAVE_STD_FILESYSTEM
+    #endif
+#elif defined(_MSVC_LANG) && _MSVC_LANG >= 201703L
+    #define SQLITECPP_HAVE_STD_FILESYSTEM
+#endif
+
+#ifdef SQLITECPP_HAVE_STD_FILESYSTEM
+#include  <filesystem>
+#endif // c++17 and a suitable compiler
+
 #include <memory>
 #include <string.h>
 
@@ -38,11 +60,21 @@ extern const int OPEN_READONLY;     // SQLITE_OPEN_READONLY
 extern const int OPEN_READWRITE;    // SQLITE_OPEN_READWRITE
 /// With OPEN_READWRITE: The database is opened for reading and writing, and is created if it does not already exist.
 extern const int OPEN_CREATE;       // SQLITE_OPEN_CREATE
-/// Open database with thread-safety
-extern const int OPEN_FULLMUTEX;    // SQLITE_OPEN_FULLMUTEX
-
 /// Enable URI filename interpretation, parsed according to RFC 3986 (ex. "file:data.db?mode=ro&cache=private")
 extern const int OPEN_URI;          // SQLITE_OPEN_URI
+/// Open in memory database
+extern const int OPEN_MEMORY;       // SQLITE_OPEN_MEMORY
+/// Open database in multi-thread threading mode
+extern const int OPEN_NOMUTEX;      // SQLITE_OPEN_NOMUTEX
+/// Open database with thread-safety in serialized threading mode
+extern const int OPEN_FULLMUTEX;    // SQLITE_OPEN_FULLMUTEX
+/// Open database with shared cache enabled
+extern const int OPEN_SHAREDCACHE;  // SQLITE_OPEN_SHAREDCACHE
+/// Open database with shared cache disabled
+extern const int OPEN_PRIVATECACHE; // SQLITE_OPEN_PRIVATECACHE
+/// Database filename is not allowed to be a symbolic link (Note: only since SQlite 3.31.0 from 2020-01-22)
+extern const int OPEN_NOFOLLOW;     // SQLITE_OPEN_NOFOLLOW
+
 
 extern const int OK;                ///< SQLITE_OK (used by check() bellow)
 
@@ -150,6 +182,38 @@ public:
     {
     }
 
+    #ifdef SQLITECPP_HAVE_STD_FILESYSTEM
+
+    /**
+     * @brief Open the provided database std::filesystem::path.
+     *
+     * @note This feature requires std=C++17
+     *
+     * Uses sqlite3_open_v2() with readonly default flag, which is the opposite behavior
+     * of the old sqlite3_open() function (READWRITE+CREATE).
+     * This makes sense if you want to use it on a readonly filesystem
+     * or to prevent creation of a void file when a required file is missing.
+     *
+     * Exception is thrown in case of error, then the Database object is NOT constructed.
+     *
+     * @param[in] apFilename        Path/uri to the database file ("filename" sqlite3 parameter)
+     * @param[in] aFlags            SQLite::OPEN_READONLY/SQLite::OPEN_READWRITE/SQLite::OPEN_CREATE...
+     * @param[in] aBusyTimeoutMs    Amount of milliseconds to wait before returning SQLITE_BUSY (see setBusyTimeout())
+     * @param[in] apVfs             UTF-8 name of custom VFS to use, or nullptr for sqlite3 default
+     *
+     * @throw SQLite::Exception in case of error
+     */
+    Database(const std::filesystem::path& apFilename,
+             const int   aFlags         = SQLite::OPEN_READONLY,
+             const int   aBusyTimeoutMs = 0,
+             const std::string& aVfs            = "") :
+        Database(reinterpret_cast<const char*>(apFilename.u8string().c_str()),
+                 aFlags, aBusyTimeoutMs, aVfs.empty() ? nullptr : aVfs.c_str())
+    {
+    }
+
+    #endif // have std::filesystem
+
     // Database is non-copyable
     Database(const Database&) = delete;
     Database& operator=(const Database&) = delete;
@@ -190,13 +254,14 @@ public:
     void setBusyTimeout(const int aBusyTimeoutMs);
 
     /**
-     * @brief Shortcut to execute one or multiple statements without results.
+     * @brief Shortcut to execute one or multiple statements without results. Return the number of changes.
      *
      *  This is useful for any kind of statements other than the Data Query Language (DQL) "SELECT" :
      *  - Data Manipulation Language (DML) statements "INSERT", "UPDATE" and "DELETE"
      *  - Data Definition Language (DDL) statements "CREATE", "ALTER" and "DROP"
      *  - Data Control Language (DCL) statements "GRANT", "REVOKE", "COMMIT" and "ROLLBACK"
      *
+     * @see Database::tryExec() to execute, returning the sqlite result code
      * @see Statement::exec() to handle precompiled statements (for better performances) without results
      * @see Statement::executeStep() to handle "SELECT" queries with results
      *
@@ -217,6 +282,7 @@ public:
      *  - Data Definition Language (DDL) statements "CREATE", "ALTER" and "DROP"
      *  - Data Control Language (DCL) statements "GRANT", "REVOKE", "COMMIT" and "ROLLBACK"
      *
+     * @see Database::tryExec() to execute, returning the sqlite result code
      * @see Statement::exec() to handle precompiled statements (for better performances) without results
      * @see Statement::executeStep() to handle "SELECT" queries with results
      *
@@ -230,6 +296,41 @@ public:
     int exec(const std::string& aQueries)
     {
         return exec(aQueries.c_str());
+    }
+
+    /**
+     * @brief Try to execute one or multiple statements, returning the sqlite result code.
+     *
+     *  This is useful for any kind of statements other than the Data Query Language (DQL) "SELECT" :
+     *  - Data Manipulation Language (DML) statements "INSERT", "UPDATE" and "DELETE"
+     *  - Data Definition Language (DDL) statements "CREATE", "ALTER" and "DROP"
+     *  - Data Control Language (DCL) statements "GRANT", "REVOKE", "COMMIT" and "ROLLBACK"
+     *
+     * @see exec() to execute, returning number of rows modified
+     *
+     * @param[in] aQueries  one or multiple UTF-8 encoded, semicolon-separate SQL statements
+     *
+     * @return the sqlite result code.
+     */
+    int tryExec(const char* apQueries) noexcept;
+
+    /**
+     * @brief Try to execute one or multiple statements, returning the sqlite result code.
+     *
+     *  This is useful for any kind of statements other than the Data Query Language (DQL) "SELECT" :
+     *  - Data Manipulation Language (DML) statements "INSERT", "UPDATE" and "DELETE"
+     *  - Data Definition Language (DDL) statements "CREATE", "ALTER" and "DROP"
+     *  - Data Control Language (DCL) statements "GRANT", "REVOKE", "COMMIT" and "ROLLBACK"
+     *
+     * @see exec() to execute, returning number of rows modified
+     *
+     * @param[in] aQueries  one or multiple UTF-8 encoded, semicolon-separate SQL statements
+     *
+     * @return the sqlite result code.
+     */
+    int tryExec(const std::string aQueries) noexcept
+    {
+        return tryExec(aQueries.c_str());
     }
 
     /**
@@ -315,6 +416,9 @@ public:
      * @return Rowid of the most recent successful INSERT into the database, or 0 if there was none.
      */
     long long getLastInsertRowid() const noexcept;
+
+    /// Get number of rows modified by last INSERT, UPDATE or DELETE statement (not DROP table).
+    int getChanges() const noexcept;
 
     /// Get total number of rows modified by all INSERT, UPDATE or DELETE statement since connection (not DROP table).
     int getTotalChanges() const noexcept;
@@ -438,7 +542,7 @@ public:
     *  This function reads the first 100 bytes of a SQLite database file
     *  and reconstructs groups of individual bytes into the associated fields
     *  in a Header object.
-    *  
+    *
     * @param[in] aFilename path/uri to a file
     *
     * @return Header object containing file data
@@ -472,7 +576,7 @@ public:
     /**
      * @brief Check if aRet equal SQLITE_OK, else throw a SQLite::Exception with the SQLite error message
      */
-    void check_sqlite_result(const int aRet) const
+    void sqlitecpp_check(const int aRet) const
     {
         if (SQLite::OK != aRet)
         {

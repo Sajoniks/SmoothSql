@@ -3,7 +3,7 @@
  * @ingroup SQLiteCpp
  * @brief   A prepared SQLite Statement is a compiled SQL query ready to be executed, pointing to a row of result.
  *
- * Copyright (c) 2012-2020 Sebastien Rombauts (sebastien.rombauts@gmail.com)
+ * Copyright (c) 2012-2021 Sebastien Rombauts (sebastien.rombauts@gmail.com)
  *
  * Distributed under the MIT License (MIT) (See accompanying file LICENSE.txt
  * or copy at http://opensource.org/licenses/MIT)
@@ -471,7 +471,7 @@ public:
     int tryExecuteStep() noexcept;
 
     /**
-     * @brief Execute a one-step query with no expected result.
+     * @brief Execute a one-step query with no expected result, and return the number of changes.
      *
      *  This method is useful for any kind of statements other than the Data Query Language (DQL) "SELECT" :
      *  - Data Definition Language (DDL) statements "CREATE", "ALTER" and "DROP"
@@ -488,7 +488,7 @@ public:
      *
      * @return number of row modified by this SQL statement (INSERT, UPDATE or DELETE)
      *
-     * @throw SQLite::Exception in case of error, or if row of results are returned !
+     * @throw SQLite::Exception in case of error, or if row of results are returned while they are not expected!
      */
     int exec();
 
@@ -660,6 +660,9 @@ public:
     const char * getColumnDeclaredType(const int aIndex) const;
 
 
+    /// Get number of rows modified by last INSERT, UPDATE or DELETE statement (not DROP table).
+    int getChanges() const noexcept;
+
 
     ////////////////////////////////////////////////////////////////////////////
 
@@ -751,7 +754,7 @@ private:
      *
      * @param[in] aRet SQLite return code to test against the SQLITE_OK expected value
      */
-    void check_sqlite_result(const int aRet) const
+    void sqlitecpp_check(const int aRet) const
     {
         if (SQLite::OK != aRet)
         {

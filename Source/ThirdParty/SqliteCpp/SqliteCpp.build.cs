@@ -21,7 +21,7 @@ public class SqliteCpp : ModuleRules
 			PublicAdditionalLibraries.Add(Path.Combine(PluginPath, "x64","Release", "SQLiteCpp.lib"));
 
 			// Delay-load the DLL, so we can load it from the right place first
-			PublicDelayLoadDLLs.Add("SQLiteCpp.dll");
+			PublicDelayLoadDLLs.Add(Path.Combine(PluginPath, "x64", "Release", "SQLiteCpp.dll"));
 
 			// Ensure that the DLL is staged along with the executable
 			RuntimeDependencies.Add(Path.Combine(PluginPath, "x64", "Release", "SQLiteCpp.dll"));
@@ -34,7 +34,7 @@ public class SqliteCpp : ModuleRules
 			PublicAdditionalLibraries.Add(Path.Combine(PluginPath, "sqlite", "x64", "Release", "sqlite3.lib"));
 
 			 // Delay-load the DLL, so we can load it from the right place first
-			PublicDelayLoadDLLs.Add("sqlite3.dll");
+			 PublicDelayLoadDLLs.Add(Path.Combine(PluginPath, "sqlite", "x64", "Release", "sqlite3.dll"));
 
 			 // Ensure that the DLL is staged along with the executable
 			RuntimeDependencies.Add(Path.Combine(PluginPath, "sqlite", "x64", "Release", "sqlite3.dll"));

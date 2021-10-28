@@ -46,7 +46,14 @@ void USqliteStatement::Reset()
 {
 	if (Statement)
 	{
-		Statement->reset();
+		try
+		{
+			Statement->reset();
+		}
+		catch (SQLite::Exception& e)
+		{
+			UE_LOG(LogSmoothSqlite, Error, L"Error resetting statement: %s", *FString(e.getErrorStr()))
+		}
 	}
 }
 
@@ -54,7 +61,14 @@ void USqliteStatement::ClearBindings()
 {
 	if (Statement)
 	{
-		Statement->clearBindings();
+		try
+		{
+			Statement->clearBindings();
+		}
+		catch (SQLite::Exception& e)
+		{
+			UE_LOG(LogSmoothSqlite, Error, L"Error clearing bindings: %s", *FString(e.getErrorStr()))
+		}
 	}
 }
 

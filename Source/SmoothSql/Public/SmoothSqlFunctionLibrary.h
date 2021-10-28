@@ -47,6 +47,8 @@ public:
 	UFUNCTION(BlueprintCallable, BlueprintPure, Category = "SmoothSqlite|Query") 
 	static FString GetString(USqliteStatement* Target, const FString& Column);
 
+
+	
 	UFUNCTION(BlueprintCallable, BlueprintInternalUseOnly, Category="SmoothSqlite|Bind")
 	static USqliteStatement* K2_StepStatement(USqliteStatement* Target, bool& Success);
 };

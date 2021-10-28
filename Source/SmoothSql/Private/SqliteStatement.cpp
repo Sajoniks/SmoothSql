@@ -31,6 +31,33 @@ bool USqliteStatement::InitQuery(USqliteDatabase* Connection, const FString& Que
 	return false;
 }
 
+void USqliteStatement::CloseStatement()
+{
+	if (Statement)
+	{
+		UE_LOG(LogSmoothSqlite, Display, L"Received statement close")
+		
+		Statement.Release();
+		MarkPendingKill();
+	}
+}
+
+void USqliteStatement::Reset()
+{
+	if (Statement)
+	{
+		Statement->reset();
+	}
+}
+
+void USqliteStatement::ClearBindings()
+{
+	if (Statement)
+	{
+		Statement->clearBindings();
+	}
+}
+
 bool USqliteStatement::Execute_OneStep()
 {
 	try
@@ -79,5 +106,6 @@ SQLite::Statement* USqliteStatement::GetStatement() const
 
 USqliteStatement::~USqliteStatement()
 {
+	CloseStatement();
 }
 

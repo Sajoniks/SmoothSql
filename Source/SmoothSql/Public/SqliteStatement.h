@@ -12,7 +12,7 @@ class USqliteDatabase;
 /**
  * Wrapper over SQLite::Statement
  */
-UCLASS(BlueprintType)
+UCLASS(BlueprintType, DefaultToInstanced, EditInlineNew)
 class SMOOTHSQL_API USqliteStatement : public UObject
 {
 	GENERATED_BODY()
@@ -26,6 +26,24 @@ public:
 	 */
 	bool InitQuery(USqliteDatabase* Connection, const FString& Query);
 
+	/**
+	 * Close this statement. Statement is not valid after this call
+	 */
+	UFUNCTION(BlueprintCallable, Category="SmoothSqlite|Statement")
+	void CloseStatement();
+
+	/**
+	 *	Reset this statement to make it ready for a new execution
+	 */
+	UFUNCTION(BlueprintCallable, Category="SmoothSqlite|Statement")
+	void Reset();
+
+	/**
+	 *	Clear away all bindings of this prepared statement
+	 */
+	UFUNCTION(BlueprintCallable, Category="SmoothSqlite|Statement")
+	void ClearBindings();
+	
 	/**
 	 * Execute one-step query without result set
 	 * @return True, if successful execution
@@ -52,6 +70,9 @@ public:
 	virtual ~USqliteStatement() override;
 
 private:
+
+    UPROPERTY(EditAnywhere, Category="Inline")
+    FString InlineQuery;
 
 	TUniquePtr<SQLite::Statement> Statement;	///< Wrapped SQL Statement
 };

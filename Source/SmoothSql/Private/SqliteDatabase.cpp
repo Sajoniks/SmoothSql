@@ -4,6 +4,7 @@
 #include "SqliteDatabase.h"
 #include "SmoothSql.h"
 #include "SqliteStatement.h"
+#include "SqliteTransaction.h"
 #include "Kismet/KismetSystemLibrary.h"
 #include "Subsystem/DatabaseSingleton.h"
 
@@ -70,6 +71,38 @@ bool USqliteDatabase::HasValidConnection() const
 	return Database ? bool ( Database->getHandle() ) : ( false );
 }
 
+bool USqliteDatabase::CommitTransaction()
+{
+	if (CurrentTransaction)
+	{
+		CurrentTransaction->Commit();
+
+		if (!CurrentTransaction->IsValidLowLevel())
+		{
+			CurrentTransaction = nullptr;
+			return true;
+		}
+	}
+
+	return false;
+}
+
+bool USqliteDatabase::RollbackTransaction()
+{
+	if (CurrentTransaction)
+	{
+		CurrentTransaction->Rollback();
+
+		if (!CurrentTransaction->IsValidLowLevel())
+		{
+			CurrentTransaction = nullptr;
+			return true;
+		}
+	}
+
+	return false;
+}
+
 SQLite::Database* USqliteDatabase::GetDatabaseConnection() const
 {
 	return Database.Get();
@@ -90,6 +123,35 @@ USqliteStatement* USqliteDatabase::CreateQuery(const FString& QueryString)
 	}
 
 	return nullptr;
+}
+
+USqliteTransaction* USqliteDatabase::BeginTransaction()
+{
+	if (HasValidConnection() && !CurrentTransaction)
+	{
+		CurrentTransaction = NewObject<USqliteTransaction>();
+		if (CurrentTransaction->InitTransaction(*GetDatabaseConnection()))
+		{
+			return CurrentTransaction;
+		}
+		else
+		{
+			CurrentTransaction->MarkPendingKill();
+			CurrentTransaction = nullptr;
+		}
+	}
+
+	return nullptr;
+}
+
+bool USqliteDatabase::HasActiveTransaction() const
+{
+	return CurrentTransaction != nullptr && CurrentTransaction->IsValidLowLevelFast();
+}
+
+USqliteTransaction* USqliteDatabase::GetTransaction() const
+{
+	return CurrentTransaction;
 }
 
 bool USqliteDatabase::Execute_OneStep(const FString& Query)

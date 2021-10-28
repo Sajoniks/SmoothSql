@@ -13,6 +13,7 @@
 
 
 class UDatabaseSingleton;
+class USqliteTransaction;
 class USqliteStatement;
 
 UCLASS(BlueprintType)
@@ -44,6 +45,21 @@ public:
 	bool HasValidConnection() const;
 
 	/**
+	 * Commit transaction (if any)
+	 * @return True, if commited
+	 */
+	UFUNCTION(BlueprintCallable, Category="SmoothSqlite|Connection")
+	bool CommitTransaction();
+
+	/**
+	 *	Rollback transaction (if any)
+	 *	@return True, if success
+	 */
+	UFUNCTION(BlueprintCallable, Category="SmoothSqlite|Connection")
+	bool RollbackTransaction();
+
+	
+	/**
 	 * Get wrapped sqlite database connection
 	 * @return Ptr to SQLite::Database
 	 */
@@ -57,6 +73,26 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "SmoothSqlite|Query")
 	USqliteStatement* CreateQuery(const FString& QueryString);
 
+	/**
+	 * Start SQL transaction
+	 */
+	UFUNCTION(BlueprintCallable, Category = "SmoothSqlite|Query")
+	USqliteTransaction* BeginTransaction();
+
+	/**
+	 * If any transaction is active
+	 */
+	UFUNCTION(BlueprintCallable, Category = "SmoothSqlite|Query")
+	bool HasActiveTransaction() const;
+
+	/**
+	 * Get current active transaction (if any)
+	 * @return Transaction object
+	 */
+	UFUNCTION(BlueprintCallable, Category = "SmoothSqlite|Query")
+	USqliteTransaction* GetTransaction() const;
+		
+	
 	/**
 	 * Execute query without result set
 	 * @param [in] Query Query to execute
@@ -72,6 +108,11 @@ public:
 
 private:
 	
-	TUniquePtr<SQLite::Database> Database; ///< Underlaying database
-	UDatabaseSingleton* Singleton;		   ///< Database manager
+	TUniquePtr<SQLite::Database> Database;	///< Underlaying database
+
+	UPROPERTY()
+	UDatabaseSingleton* Singleton;			///< Database manager
+
+	UPROPERTY()
+	USqliteTransaction* CurrentTransaction; ///< Current transaction
 };

@@ -58,11 +58,23 @@ void USqliteDatabase::CloseConnection()
 {
 	if (Database)
 	{
+		for (auto It = Statements.CreateIterator(); It; ++It)
+		{
+			// Close all statements
+			It.ElementIt->Value->CloseStatement();
+		}
+		Statements.Reset();
+
+		if (CurrentTransaction)
+		{
+			RollbackTransaction();
+		}
+		
+		// Notify singleton that connection was destroyed
+		Singleton->CloseConnection(nullptr, this);
+		
 		// Release underlaying db
 		Database.Release();
-
-		// Notify singleton that connection was destroyed
-		Singleton->CloseConnection(this);
 	}
 }
 
@@ -75,12 +87,14 @@ bool USqliteDatabase::CommitTransaction()
 {
 	if (CurrentTransaction)
 	{
-		CurrentTransaction->Commit();
-
-		if (CurrentTransaction->IsPendingKill())
+		try
 		{
-			CurrentTransaction = nullptr;
-			return true;
+			CurrentTransaction->commit();
+			CurrentTransaction.Reset();
+		}
+		catch (SQLite::Exception& e)
+		{
+			UE_LOG(LogSmoothSqlite, Error, L"Error during Database Transaction: %s", *FString(e.getErrorStr()))
 		}
 	}
 
@@ -91,13 +105,7 @@ bool USqliteDatabase::RollbackTransaction()
 {
 	if (CurrentTransaction)
 	{
-		CurrentTransaction->Rollback();
-
-		if (!CurrentTransaction->IsValidLowLevel())
-		{
-			CurrentTransaction = nullptr;
-			return true;
-		}
+		CurrentTransaction.Reset();
 	}
 
 	return false;
@@ -125,33 +133,22 @@ USqliteStatement* USqliteDatabase::CreateQuery(const FString& QueryString)
 	return nullptr;
 }
 
-USqliteTransaction* USqliteDatabase::BeginTransaction()
+void USqliteDatabase::BeginTransaction()
 {
 	if (HasValidConnection() && !CurrentTransaction)
 	{
-		CurrentTransaction = NewObject<USqliteTransaction>();
-		if (CurrentTransaction->InitTransaction(*GetDatabaseConnection()))
-		{
-			return CurrentTransaction;
-		}
-		else
-		{
-			CurrentTransaction->MarkPendingKill();
-			CurrentTransaction = nullptr;
-		}
+		CurrentTransaction.Reset(new SQLite::Transaction(*Database));
 	}
-
-	return nullptr;
 }
 
 bool USqliteDatabase::HasActiveTransaction() const
 {
-	return CurrentTransaction != nullptr && CurrentTransaction->IsValidLowLevelFast();
+	return CurrentTransaction != nullptr;
 }
 
-USqliteTransaction* USqliteDatabase::GetTransaction() const
+SQLite::Transaction* USqliteDatabase::GetTransaction() const
 {
-	return CurrentTransaction;
+	return CurrentTransaction.Get();
 }
 
 bool USqliteDatabase::Execute(const FString& Query)
@@ -178,7 +175,7 @@ FSqliteColumn USqliteDatabase::Fetch(const FString& Query)
 	{
 		try
 		{
-			const auto Col = Database->execAndGet(std::string(TCHAR_TO_UTF8(*Query)));
+			auto Col = Database->execAndGet(std::string(TCHAR_TO_UTF8(*Query)));
 			return FSqliteColumn(Col);
 		}
 		catch (SQLite::Exception& e)
@@ -190,13 +187,36 @@ FSqliteColumn USqliteDatabase::Fetch(const FString& Query)
 	return {};
 }
 
-
-USqliteDatabase::~USqliteDatabase()
+void USqliteDatabase::NotifyStatementCreated(USqliteStatement* Statement)
 {
+	if (Statement)
+	{
+		Statements.Add(Statement);
+	}
+}
+
+void USqliteDatabase::NotifyStatementClosed(USqliteStatement* Statement)
+{
+	if (Statement)
+	{
+		Statements.Remove(Statement);
+	}
+}
+
+void USqliteDatabase::BeginDestroy()
+{
+	Super::BeginDestroy();
+	
 	if (!HasAnyFlags(RF_ClassDefaultObject))
 	{
 		CloseConnection();
 		UE_LOG(LogSmoothSqlite, Display, L"Connection destroy executed")
 	}
+}
+
+
+USqliteDatabase::~USqliteDatabase()
+{
+
 }
 

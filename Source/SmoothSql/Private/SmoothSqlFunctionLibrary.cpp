@@ -9,9 +9,6 @@
 #include "SQLiteCpp/Exception.h"
 
 
-
-
-
 void USmoothSqlFunctionLibrary::K2_BindQueryParam_Int(USqliteStatement* Target, const FString& Param, int32 Value)
 {
 	if (!Target) return;
@@ -236,16 +233,13 @@ struct FColumnGetHelper<float>
 template<class T>
 decltype(auto) GetSomething_Column(FSqliteColumn& Row)
 {
-	if (Row.Column)
+	try
 	{
-		try
-		{
-			return FColumnGetHelper<T>::Get(Row);
-		}
-		catch (SQLite::Exception& e)
-		{
-			UE_LOG(LogSmoothSqlite, Display, L"Error occured getting value: %s", *FString(e.getErrorStr()))
-		}
+		return FColumnGetHelper<T>::Get(Row);
+	}
+	catch (SQLite::Exception& e)
+	{
+		UE_LOG(LogSmoothSqlite, Display, L"Error occured getting value: %s", *FString(e.getErrorStr()))
 	}
 
 	return T{};
@@ -269,9 +263,4 @@ float USmoothSqlFunctionLibrary::GetFloat_Column(FSqliteColumn& Column)
 FString USmoothSqlFunctionLibrary::GetString_Column(FSqliteColumn& Column)
 {
 	return GetSomething_Column<FString>(Column);
-}
-
-bool USmoothSqlFunctionLibrary::IsValid_Column(FSqliteColumn& Column)
-{
-	return Column.Column.IsValid();
 }

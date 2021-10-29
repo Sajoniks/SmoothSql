@@ -3,7 +3,9 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "SmoothSql.h"
 #include "SQLiteCpp/Column.h"
+#include "SQLiteCpp/Transaction.h"
 #include "SmoothSqliteDataTypes.generated.h"
 
 
@@ -35,13 +37,13 @@ struct FSqliteColumn
 
 	FSqliteColumn()
 		: Column(nullptr) {}
-
-	FSqliteColumn(const SQLite::Column& Column)
+	
+	FSqliteColumn(SQLite::Column& Column)
 		: Column(new SQLite::Column(Column)) {}
-	
-	
+
 	TUniquePtr<SQLite::Column> Column;
 };
+
 
 template<>
 struct TStructOpsTypeTraits<FSqliteColumn> : TStructOpsTypeTraitsBase2<FSqliteColumn>

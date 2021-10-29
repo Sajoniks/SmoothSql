@@ -18,6 +18,9 @@ bool USqliteStatement::InitQuery(USqliteDatabase* Connection, const FString& Que
 			SQLite::Database& Con = *Connection->GetDatabaseConnection();
 				
 			Statement.Reset(new SQLite::Statement(Con, QueryStr));
+
+			OwningConnection = Connection;
+			OwningConnection->NotifyStatementCreated(this);
 		
 			return true;
 		}
@@ -37,7 +40,18 @@ void USqliteStatement::CloseStatement()
 	{
 		Statement.Release();
 		MarkPendingKill();
+
+		if (auto Owner = OwningConnection.Get())
+		{
+			Owner->NotifyStatementClosed(this);
+		}
 	}
+}
+
+void USqliteStatement::BeginDestroy()
+{
+	UObject::BeginDestroy();
+	CloseStatement();	
 }
 
 void USqliteStatement::Reset()
@@ -114,10 +128,5 @@ bool USqliteStatement::IsDone() const
 SQLite::Statement* USqliteStatement::GetStatement() const
 {
 	return Statement.Get();
-}
-
-USqliteStatement::~USqliteStatement()
-{
-	CloseStatement();
 }
 

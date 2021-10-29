@@ -6,12 +6,21 @@
 #include "SmoothSql.h"
 #include "SqliteDatabase.h"
 #include "SqliteTransaction.h"
+#include "DeferredDatabaseCleanupAction.h"
 
+bool UDatabaseSingleton::CleanupTick(float InDeltaTime, USqliteDatabase* Db)
+{
+	GetDefault<UDeferredDatabaseCleanupAction>(CleanupAction)->OnDatabaseCleanup(Db);
+	FinalizeDb(Db);
+	return false;
+}
 
-USqliteDatabase* UDatabaseSingleton::CreateConnection(const FSqliteDBConnectionParms& Parms) const
+USqliteDatabase* UDatabaseSingleton::CreateConnection(const FSqliteDBConnectionParms& Parms, TSubclassOf<UDeferredDatabaseCleanupAction> CleanupActionClass) const
 {
 	if (Parms.DBName.IsEmpty()) return nullptr;
 	if (Parms.Folder.IsEmpty()) return nullptr;
+
+	FTicker::GetCoreTicker().RemoveTicker(TickHandle);
 		
 	const auto MutableThis = const_cast<UDatabaseSingleton*>(this);
 	auto CurrentDatabase = NewObject<USqliteDatabase>(MutableThis, USqliteDatabase::StaticClass(), "SqliteDBConnection");
@@ -20,6 +29,7 @@ USqliteDatabase* UDatabaseSingleton::CreateConnection(const FSqliteDBConnectionP
 	{
 		CurrentDatabase->AddToRoot();
 		Connections.Add(CurrentDatabase, CurrentDatabase);
+		CleanupAction = CleanupActionClass.Get();
 	}
 	else
 	{
@@ -30,30 +40,45 @@ USqliteDatabase* UDatabaseSingleton::CreateConnection(const FSqliteDBConnectionP
 }
 
 
+void UDatabaseSingleton::FinalizeDb(USqliteDatabase* const Db)
+{
+	// And from map
+	Connections.Remove(Db);
 
-void UDatabaseSingleton::CloseConnection(USqliteDatabase* DB)
+	
+	if (Db->IsValidLowLevelFast())
+	{
+		// Remove it from root
+		Db->RemoveFromRoot();
+		Db->MarkPendingKill();
+		Db->CloseConnection();
+	}
+	
+	FTicker::GetCoreTicker().RemoveTicker(TickHandle);
+	
+	UE_LOG(LogSmoothSqlite, Display, L"Destroying database connection...");
+}
+
+void UDatabaseSingleton::CloseConnection(UObject* WorldContext, USqliteDatabase* DB)
 {
 	// Find connection 
 	if (const auto RemoveDb = Connections.Find(DB))
 	{
 		const auto Db = *RemoveDb;
-
-		if (Db->IsValidLowLevelFast())
-		{
-			// Remove it from root
-			Db->RemoveFromRoot();
-			Db->MarkPendingKill();
-		}
-
-
-		// And from map
-		Connections.Remove(Db);
 		
-		UE_LOG(LogSmoothSqlite, Display, L"Destroying database connection...");
+		if (CleanupAction)
+		{
+			TickHandle = FTicker::GetCoreTicker().AddTicker(FTickerDelegate::CreateUObject(this, &UDatabaseSingleton::CleanupTick, Db), 0.5f);
+		}
+		else
+		{
+			FinalizeDb(Db);
+		}
+		
 	}
 }
 
 void UDatabaseSingleton::Deinitialize()
 {
-	
+	FTicker::GetCoreTicker().RemoveTicker(TickHandle);
 }

@@ -18,7 +18,7 @@ class SMOOTHSQL_API USqliteStatement : public UObject
 	GENERATED_BODY()
 
 public:
-
+	
 	/**
 	 * Init object with query
 	 * @param [in] Query Query string
@@ -31,6 +31,8 @@ public:
 	 */
 	UFUNCTION(BlueprintCallable, Category="SmoothSqlite|Statement")
 	void CloseStatement();
+
+	virtual void BeginDestroy() override;
 
 	/**
 	 *	Reset this statement to make it ready for a new execution
@@ -53,7 +55,7 @@ public:
 
 	/**
 	 * Execute query step 
-	 * @return True, if successful execution
+	 * @return True, if row is ready. False, if exhausted
 	 */
 	UFUNCTION(BlueprintCallable, Category="SmoothSqlite|Statement")
 	bool Fetch();
@@ -67,9 +69,8 @@ public:
 
 	SQLite::Statement* GetStatement() const;
 
-	virtual ~USqliteStatement() override;
-
 private:
 	
 	TUniquePtr<SQLite::Statement> Statement;	///< Wrapped SQL Statement
+	TWeakObjectPtr<USqliteDatabase> OwningConnection;
 };

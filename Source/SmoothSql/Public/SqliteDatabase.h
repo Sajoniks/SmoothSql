@@ -77,7 +77,7 @@ public:
 	 * Start SQL transaction
 	 */
 	UFUNCTION(BlueprintCallable, Category = "SmoothSqlite|Query")
-	USqliteTransaction* BeginTransaction();
+	void BeginTransaction();
 
 	/**
 	 * If any transaction is active
@@ -89,8 +89,7 @@ public:
 	 * Get current active transaction (if any)
 	 * @return Transaction object
 	 */
-	UFUNCTION(BlueprintCallable, Category = "SmoothSqlite|Query")
-	USqliteTransaction* GetTransaction() const;
+	SQLite::Transaction* GetTransaction() const;
 		
 	
 	/**
@@ -109,18 +108,24 @@ public:
 	 */
 	UFUNCTION(BlueprintCallable, Category = "SmoothSqlite|Query", meta=(DisplayName="Fetch"))
 	FSqliteColumn Fetch(const FString& Query);
-	
-	
+
+
+	void NotifyStatementCreated(USqliteStatement* Statement);
+	void NotifyStatementClosed(USqliteStatement* Statement);
+
+	virtual void BeginDestroy() override;
+
+
 	virtual ~USqliteDatabase() override;
 
 
 private:
 	
-	TUniquePtr<SQLite::Database> Database;	///< Underlaying database
-
+	TUniquePtr<SQLite::Database> Database;				///< Underlaying database
+	TUniquePtr<SQLite::Transaction> CurrentTransaction; ///< Active transaction
+	
 	UPROPERTY()
 	UDatabaseSingleton* Singleton;			///< Database manager
-
 	UPROPERTY()
-	USqliteTransaction* CurrentTransaction; ///< Current transaction
+	TSet<USqliteStatement*> Statements;
 };

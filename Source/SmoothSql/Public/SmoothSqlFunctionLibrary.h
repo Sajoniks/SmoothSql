@@ -60,9 +60,7 @@ public:
 
 	UFUNCTION(BlueprintCallable, BlueprintPure, Category = "SmoothSqlite|Query", meta=(DisplayName="Get String")) 
 	static FString GetString_Column(UPARAM(ref) FSqliteColumn& Column);
-
-	UFUNCTION(BlueprintCallable, BlueprintPure, Category = "SmoothSqlite|Query")
-	static bool IsValid_Column(UPARAM(ref) FSqliteColumn& Column);
+	
 
 
 	

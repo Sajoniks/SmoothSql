@@ -48,15 +48,15 @@ public:
 	 * Execute one-step query without result set
 	 * @return True, if successful execution
 	 */
-	UFUNCTION(BlueprintCallable, Category="SmoothSqlite|Statement", meta=(DisplayName="Execute (No Result)"))
-	bool Execute_OneStep();
+	UFUNCTION(BlueprintCallable, Category="SmoothSqlite|Statement")
+	bool Execute();
 
 	/**
 	 * Execute query step 
 	 * @return True, if successful execution
 	 */
-	UFUNCTION(BlueprintCallable, Category="SmoothSqlite|Statement", meta=(DisplayName="StepQuery"))
-	bool Step();
+	UFUNCTION(BlueprintCallable, Category="SmoothSqlite|Statement")
+	bool Fetch();
 	
 	/**
 	 * Check if result set is exhausted
@@ -70,9 +70,6 @@ public:
 	virtual ~USqliteStatement() override;
 
 private:
-
-    UPROPERTY(EditAnywhere, Category="Inline")
-    FString InlineQuery;
-
+	
 	TUniquePtr<SQLite::Statement> Statement;	///< Wrapped SQL Statement
 };

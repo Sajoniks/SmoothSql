@@ -3,6 +3,7 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "SQLiteCpp/Column.h"
 #include "SmoothSqliteDataTypes.generated.h"
 
 
@@ -22,4 +23,31 @@ struct FSqliteDBConnectionParms
 	
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="DBConnectionParams")
 	int32 BusyTimeout = 0;
+};
+
+
+/// Wrapper over SQLite Column
+/// Non-copyable 
+USTRUCT(BlueprintType)
+struct FSqliteColumn
+{
+	GENERATED_BODY()
+
+	FSqliteColumn()
+		: Column(nullptr) {}
+
+	FSqliteColumn(const SQLite::Column& Column)
+		: Column(new SQLite::Column(Column)) {}
+	
+	
+	TUniquePtr<SQLite::Column> Column;
+};
+
+template<>
+struct TStructOpsTypeTraits<FSqliteColumn> : TStructOpsTypeTraitsBase2<FSqliteColumn>
+{
+	enum
+	{
+		WithCopy = false
+	};
 };

@@ -72,7 +72,7 @@ void USqliteStatement::ClearBindings()
 	}
 }
 
-bool USqliteStatement::Execute_OneStep()
+bool USqliteStatement::Execute()
 {
 	try
 	{
@@ -90,7 +90,7 @@ bool USqliteStatement::Execute_OneStep()
 	return false;
 }
 
-bool USqliteStatement::Step()
+bool USqliteStatement::Fetch()
 {
 	try
 	{

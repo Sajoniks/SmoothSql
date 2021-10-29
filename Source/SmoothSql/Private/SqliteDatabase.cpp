@@ -154,7 +154,7 @@ USqliteTransaction* USqliteDatabase::GetTransaction() const
 	return CurrentTransaction;
 }
 
-bool USqliteDatabase::Execute_OneStep(const FString& Query)
+bool USqliteDatabase::Execute(const FString& Query)
 {
 	if (HasValidConnection())
 	{
@@ -165,11 +165,29 @@ bool USqliteDatabase::Execute_OneStep(const FString& Query)
 		}
 		catch (SQLite::Exception& e)
 		{
-			UE_LOG(LogSmoothSqlite, Error, L"%s", *FString(e.getErrorStr()))
+			UE_LOG(LogSmoothSqlite, Error, L"Error during Database Execute: %s", *FString(e.getErrorStr()))
 		}
 	}
 
 	return false;
+}
+
+FSqliteColumn USqliteDatabase::Fetch(const FString& Query)
+{
+	if (HasValidConnection())
+	{
+		try
+		{
+			const auto Col = Database->execAndGet(std::string(TCHAR_TO_UTF8(*Query)));
+			return FSqliteColumn(Col);
+		}
+		catch (SQLite::Exception& e)
+		{
+			UE_LOG(LogSmoothSqlite, Error, L"Error during Database Fetch: %s", *FString(e.getErrorStr()))
+		}
+	}
+
+	return {};
 }
 
 

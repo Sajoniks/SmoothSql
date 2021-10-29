@@ -99,9 +99,17 @@ public:
 	 * @return True if successful
 	 * @note Multiple statements can be separated with ";"
 	 */
-	UFUNCTION(BlueprintCallable, Category = "SmoothSqlite|Query", meta=(DisplayName="Execute (No Result)"))
-	bool Execute_OneStep(const FString& Query);
-		
+	UFUNCTION(BlueprintCallable, Category = "SmoothSqlite|Query", meta=(DisplayName="Execute"))
+	bool Execute(const FString& Query);
+
+	/**
+	 * Execute query and get first column
+	 * @param [in] Query Query to execute
+	 * @return First column
+	 */
+	UFUNCTION(BlueprintCallable, Category = "SmoothSqlite|Query", meta=(DisplayName="Fetch"))
+	FSqliteColumn Fetch(const FString& Query);
+	
 	
 	virtual ~USqliteDatabase() override;
 

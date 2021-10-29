@@ -7,6 +7,7 @@
 #include "SmoothSqlFunctionLibrary.generated.h"
 
 
+struct FSqliteColumn;
 class USqliteStatement;
 
 UCLASS()
@@ -46,6 +47,22 @@ public:
 
 	UFUNCTION(BlueprintCallable, BlueprintPure, Category = "SmoothSqlite|Query") 
 	static FString GetString(USqliteStatement* Target, const FString& Column);
+
+
+	UFUNCTION(BlueprintCallable, BlueprintPure, Category = "SmoothSqlite|Query", meta=(DisplayName="Get Int")) 
+	static int32 GetInt_Column(UPARAM(ref) FSqliteColumn& Column);
+
+	UFUNCTION(BlueprintCallable, BlueprintPure, Category = "SmoothSqlite|Query", meta=(DisplayName="Get Int64"))  
+	static int64 GetInt64_Column(UPARAM(ref) FSqliteColumn& Column);
+
+	UFUNCTION(BlueprintCallable, BlueprintPure, Category = "SmoothSqlite|Query", meta=(DisplayName="Get Float"))  
+	static float GetFloat_Column(UPARAM(ref)FSqliteColumn& Column);
+
+	UFUNCTION(BlueprintCallable, BlueprintPure, Category = "SmoothSqlite|Query", meta=(DisplayName="Get String")) 
+	static FString GetString_Column(UPARAM(ref) FSqliteColumn& Column);
+
+	UFUNCTION(BlueprintCallable, BlueprintPure, Category = "SmoothSqlite|Query")
+	static bool IsValid_Column(UPARAM(ref) FSqliteColumn& Column);
 
 
 	

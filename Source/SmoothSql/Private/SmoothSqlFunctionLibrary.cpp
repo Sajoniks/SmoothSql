@@ -5,6 +5,7 @@
 
 #include "SmoothSql.h"
 #include "SqliteStatement.h"
+#include "Data/SmoothSqliteDataTypes.h"
 #include "SQLiteCpp/Exception.h"
 
 
@@ -178,9 +179,99 @@ USqliteStatement* USmoothSqlFunctionLibrary::K2_StepStatement(USqliteStatement* 
 {
 	if (Target)
 	{
-		Success = Target->Step();
+		Success = Target->Fetch();
 	}
 
 	return Target;
 }
 
+
+
+/**
+ * Simple helper template class for getting right value of the column without code duplication
+ */
+template<class T>
+struct FColumnGetHelper
+{
+	static T Get(const FSqliteColumn& Row) {return T{};}
+};
+
+template<>
+struct FColumnGetHelper<int32>
+{
+	static auto Get(const FSqliteColumn& Row)
+	{
+		return Row.Column->getInt();
+	}
+};
+
+template<>
+struct FColumnGetHelper<int64>
+{
+	static auto Get(const FSqliteColumn& Row)
+	{
+		return Row.Column->getInt64();
+	}
+};
+
+template<>
+struct FColumnGetHelper<FString>
+{
+	static auto Get(const FSqliteColumn& Row)
+	{
+		return FString( UTF8_TO_TCHAR(Row.Column->getString().c_str()));
+	}
+};
+
+template<>
+struct FColumnGetHelper<float>
+{
+	static auto Get(const FSqliteColumn& Row)
+	{
+		return (float) Row.Column->getDouble();
+	}
+};
+
+// Main column getter method
+template<class T>
+decltype(auto) GetSomething_Column(FSqliteColumn& Row)
+{
+	if (Row.Column)
+	{
+		try
+		{
+			return FColumnGetHelper<T>::Get(Row);
+		}
+		catch (SQLite::Exception& e)
+		{
+			UE_LOG(LogSmoothSqlite, Display, L"Error occured getting value: %s", *FString(e.getErrorStr()))
+		}
+	}
+
+	return T{};
+}
+
+int32 USmoothSqlFunctionLibrary::GetInt_Column(FSqliteColumn& Column)
+{
+	return GetSomething_Column<int32>(Column);
+}
+
+int64 USmoothSqlFunctionLibrary::GetInt64_Column(FSqliteColumn& Column)
+{
+	return GetSomething_Column<int64>(Column);
+}
+
+float USmoothSqlFunctionLibrary::GetFloat_Column(FSqliteColumn& Column)
+{
+	return GetSomething_Column<float>(Column);
+}
+
+FString USmoothSqlFunctionLibrary::GetString_Column(FSqliteColumn& Column)
+{
+	return GetSomething_Column<FString>(Column);
+}
+
+bool USmoothSqlFunctionLibrary::IsValid_Column(FSqliteColumn& Column)
+{
+	return Column.Column.IsValid();
+}

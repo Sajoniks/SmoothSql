@@ -35,8 +35,6 @@ void USqliteStatement::CloseStatement()
 {
 	if (Statement)
 	{
-		UE_LOG(LogSmoothSqlite, Display, L"Received statement close")
-		
 		Statement.Release();
 		MarkPendingKill();
 	}

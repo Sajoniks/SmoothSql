@@ -33,9 +33,21 @@ void USqliteTransaction::Commit()
 {
 	if (Transaction)
 	{
-		Transaction->commit();
-		Transaction.Reset();
-		MarkPendingKill();
+		try
+		{
+			Transaction->commit();
+			Transaction.Reset();
+			MarkPendingKill();
+
+			UE_LOG(LogSmoothSqlite, Error, L"Transaction commited.");
+		}
+		catch (SQLite::Exception& e)
+		{
+			UE_LOG(LogSmoothSqlite, Display, L"Error occured during Transaction Commit: %s", *FString(e.getErrorStr()));
+			Transaction.Reset();
+			MarkPendingKill();
+		}
+
 	}
 }
 

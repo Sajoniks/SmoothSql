@@ -77,7 +77,7 @@ bool USqliteDatabase::CommitTransaction()
 	{
 		CurrentTransaction->Commit();
 
-		if (!CurrentTransaction->IsValidLowLevel())
+		if (CurrentTransaction->IsPendingKill())
 		{
 			CurrentTransaction = nullptr;
 			return true;

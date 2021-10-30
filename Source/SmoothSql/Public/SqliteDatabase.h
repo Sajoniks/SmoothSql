@@ -104,10 +104,11 @@ public:
 	/**
 	 * Execute query and get first column
 	 * @param [in] Query Query to execute
+	 * @param [out] bSuccess True, if anything was returned
 	 * @return First column
 	 */
 	UFUNCTION(BlueprintCallable, Category = "SmoothSqlite|Query", meta=(DisplayName="Fetch"))
-	FSqliteColumn Fetch(const FString& Query);
+	FSqliteColumn Fetch(const FString& Query, bool& bSuccess);
 
 
 	void NotifyStatementCreated(USqliteStatement* Statement);

@@ -169,13 +169,14 @@ bool USqliteDatabase::Execute(const FString& Query)
 	return false;
 }
 
-FSqliteColumn USqliteDatabase::Fetch(const FString& Query)
+FSqliteColumn USqliteDatabase::Fetch(const FString& Query, bool& bSuccess)
 {
 	if (HasValidConnection())
 	{
 		try
 		{
 			auto Col = Database->execAndGet(std::string(TCHAR_TO_UTF8(*Query)));
+			bSuccess = true;
 			return FSqliteColumn(Col);
 		}
 		catch (SQLite::Exception& e)
@@ -184,6 +185,7 @@ FSqliteColumn USqliteDatabase::Fetch(const FString& Query)
 		}
 	}
 
+	bSuccess = false;
 	return {};
 }
 

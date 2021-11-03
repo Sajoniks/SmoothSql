@@ -4,10 +4,11 @@
 
 #include "CoreMinimal.h"
 #include "Kismet/BlueprintFunctionLibrary.h"
+#include "Data/SmoothSqliteDataTypes.h"
 #include "SmoothSqlFunctionLibrary.generated.h"
 
 
-struct FSqliteColumn;
+class USqliteDatabase;
 class USqliteStatement;
 
 UCLASS()
@@ -35,6 +36,7 @@ public:
 	UFUNCTION(BlueprintCallable, BlueprintInternalUseOnly, Category="SmoothSqlite|Bind")
 	static void K2_BindQueryParam_Name(USqliteStatement* Target, const FString& Param, const FName& Value);
 
+
 	
 	UFUNCTION(BlueprintCallable, BlueprintPure, Category = "SmoothSqlite|Query") 
 	static int32 GetInt(USqliteStatement* Target, const FString& Column);
@@ -49,6 +51,7 @@ public:
 	static FString GetString(USqliteStatement* Target, const FString& Column);
 
 
+	
 	UFUNCTION(BlueprintCallable, BlueprintPure, Category = "SmoothSqlite|Query", meta=(DisplayName="Get Int")) 
 	static int32 GetInt_Column(UPARAM(ref) FSqliteColumn& Column);
 
@@ -68,4 +71,9 @@ public:
 	
 	UFUNCTION(BlueprintCallable, BlueprintInternalUseOnly, Category="SmoothSqlite|Bind")
 	static USqliteStatement* K2_StepStatement(USqliteStatement* Target, bool& Success);
+
+
+
+	UFUNCTION(BlueprintCallable, BlueprintPure, Category = "SmoothSqlite|Connection")
+	static USqliteDatabase* GetDatabase(const FSqliteDBConnectionParms& Parms);
 };

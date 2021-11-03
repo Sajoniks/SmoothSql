@@ -35,8 +35,6 @@ void USqliteStatement::CloseStatement()
 {
 	if (Statement)
 	{
-		UE_LOG(LogSmoothSqlite, Display, L"Received statement close")
-		
 		Statement.Release();
 		MarkPendingKill();
 	}
@@ -52,7 +50,7 @@ void USqliteStatement::Reset()
 		}
 		catch (SQLite::Exception& e)
 		{
-			UE_LOG(LogSmoothSqlite, Error, L"Error resetting statement: %s", *FString(e.getErrorStr()))
+			UE_LOG(LogSmoothSqlite, Error, L"Error occcured while Reset: %s", *FString(e.getErrorStr()))
 		}
 	}
 }
@@ -67,9 +65,15 @@ void USqliteStatement::ClearBindings()
 		}
 		catch (SQLite::Exception& e)
 		{
-			UE_LOG(LogSmoothSqlite, Error, L"Error clearing bindings: %s", *FString(e.getErrorStr()))
+			UE_LOG(LogSmoothSqlite, Error, L"Error occured while ClearBindings: %s", *FString(e.getErrorStr()))
 		}
 	}
+}
+
+void USqliteStatement::ResetAll()
+{
+	Reset();
+	ClearBindings();
 }
 
 bool USqliteStatement::Execute()

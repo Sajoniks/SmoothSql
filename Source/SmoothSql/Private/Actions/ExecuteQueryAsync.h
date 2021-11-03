@@ -8,7 +8,6 @@
 #include "ExecuteQueryAsync.generated.h"
 
 class USqliteStatement;
-class UDatabaseSingleton;
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FQueryResultOutputPin, USqliteStatement*, Statement);	
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FQueryCompleteOutputPin);
@@ -31,7 +30,6 @@ protected:
 	static bool bActive;			///< If any async query is active
 	UObject* WorldContext;			///< WorldContext
 	USqliteStatement* Statement;	///< Ptr to current statement object
-	UDatabaseSingleton* Singleton;	///< Ptr to database singleton
 	
 
 	FTimerHandle TimerHandle;		///< Query execute timer

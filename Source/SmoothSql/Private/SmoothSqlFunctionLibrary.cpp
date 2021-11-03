@@ -4,90 +4,168 @@
 #include "SmoothSqlFunctionLibrary.h"
 
 #include "SmoothSql.h"
+#include "SqliteDatabase.h"
 #include "SqliteStatement.h"
-#include "Data/SmoothSqliteDataTypes.h"
 #include "SQLiteCpp/Exception.h"
 
 
+/**
+ * Simple helper template for getting right value of the column without code duplication
+ */
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+namespace details
+{
+	/// Specialize method for correct Get value from SQLite column
+	template<class T>
+	decltype(auto) GetFromColumn(const SQLite::Column& Col)
+	{
+		return T{};
+	}
+
+	/// Defined templates
+	template<>
+	decltype(auto) GetFromColumn<int32>(const SQLite::Column& Col)
+	{
+		return Col.getInt();
+	}
+
+	template<>
+	decltype(auto) GetFromColumn<int64>(const SQLite::Column& Col)
+	{
+		return Col.getInt64();
+	}
+
+	template<>
+	decltype(auto) GetFromColumn<FString>(const SQLite::Column& Col)
+	{
+		return FString( UTF8_TO_TCHAR(Col.getString().c_str()));
+	}
+
+	template<>
+	decltype(auto) GetFromColumn<float>(const SQLite::Column& Col)
+	{
+		return (float) Col.getDouble();
+	}
+	///
+}
+/// Get value from FSqliteColumn
+template<class T>
+decltype(auto) GetFromStructColumn(FSqliteColumn& Row)
+{
+	if (Row.Column)
+	{
+		try
+		{
+			return details::GetFromColumn<T>(*Row.Column.Get());
+		}
+		catch (SQLite::Exception& e)
+		{
+			UE_LOG(LogSmoothSqlite, Display, L"Error occured getting value: %s", *FString(e.getErrorStr()))
+		}
+	}
+
+	return T{};
+}
+
+/// Get column value from Sqlite Statement
+template<class T>
+static T GetFromStatement(USqliteStatement* Statement, const FString& Column)
+{
+	try
+	{
+		if (!Statement || !Statement->GetStatement()) return T{};
+		return details::GetFromColumn<T>(Statement->GetStatement()->getColumn(TCHAR_TO_UTF8(*Column)));
+	}
+	catch (SQLite::Exception& e)
+	{
+		UE_LOG(LogSmoothSqlite, Error, L"Error retrieving column: %s (%d)", *FString(e.getErrorStr()), e.getErrorCode());
+		return T{};
+	}
+}
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 
+
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+namespace details
+{
+	/// Specialize method for correct binding value to query param
+	template<class T>
+	void BindQueryParam(const std::string& Param, const T& Value, SQLite::Statement& Statement)
+	{
+		Statement.bind(Param, Value);
+	}
+	
+	/// Defined templates
+	template<>
+	void BindQueryParam(const std::string& Param, const FString& Value, SQLite::Statement& Statement)
+	{
+		Statement.bind(Param, std::string(TCHAR_TO_UTF8(*Value)));
+	}
+	///
+
+
+	template<class T>
+	void Log(SQLite::Exception& e, const T& Value, const FString& Param)
+	{
+		UE_LOG(LogSmoothSqlite, Error, L"Failed to bind value '%d' to param '%s'", Value, *Param);
+	}
+
+
+	template<>
+	void Log<FString>(SQLite::Exception& e, const FString& Value, const FString& Param)
+	{
+		UE_LOG(LogSmoothSqlite, Error, L"Failed to bind value '%s' to param '%s'", *Value, *Param);
+	}
+
+	template<>
+	void Log<float>(SQLite::Exception& e, const float& Value, const FString& Param)
+	{
+		UE_LOG(LogSmoothSqlite, Error, L"Failed to bind value '%f' to param '%s'", Value, *Param);
+	}
+}
+
+/// Main helper method binding query param
+template <class T>
+void Bind(const FString& Param, const T& Value, USqliteStatement* Statement)
+{
+	try
+	{
+		if (!Statement || !Statement->GetStatement()) return;
+
+		const std::string ParamName = std::string(TCHAR_TO_UTF8(*Param));
+			
+		details::BindQueryParam(ParamName, Value, *Statement->GetStatement());
+	}
+	catch (SQLite::Exception& e)
+	{
+		(void)e;
+		details::Log(e, Value, Param);
+	}
+}
 
 void USmoothSqlFunctionLibrary::K2_BindQueryParam_Int(USqliteStatement* Target, const FString& Param, int32 Value)
 {
-	if (!Target) return;
-
-	
-	auto& sqlStatement = *Target->GetStatement();
-	std::string c_ParamName = ":" + std::string(TCHAR_TO_UTF8(*Param));
-
-	 try
-	 {
-		sqlStatement.bind(c_ParamName, Value);
-	 }
-	 catch (const SQLite::Exception& e)
-	 {
-	 	(void)e;
-	 	UE_LOG(LogSmoothSqlite, Error, L"Failed to bind value '%d' to param '%s'", Value, *Param);
-	 }
+	Bind<int32>(Param, Value, Target);
 }
 
 void USmoothSqlFunctionLibrary::K2_BindQueryParam_Int64(USqliteStatement* Target, const FString& Param, int64 Value)
 {
-	if (!Target) return;
-
-
-	auto& sqlStatement = *Target->GetStatement();
-	std::string c_ParamName = ":" + std::string(TCHAR_TO_UTF8(*Param));
-	
-	try
-	{
-		sqlStatement.bind(c_ParamName, Value);
-	}
-	catch (const SQLite::Exception& e)
-	{
-		(void)e;
-		UE_LOG(LogSmoothSqlite, Error, L"Failed to bind value '%d' to param '%s'", Value, *Param);
-	}
-
+	Bind<int64>(Param, Value, Target);
 }
 
 void USmoothSqlFunctionLibrary::K2_BindQueryParam_Float(USqliteStatement* Target, const FString& Param, float Value)
 {
-	if (!Target) return;
-
-	
-	auto& sqlStatement = *Target->GetStatement();
-	std::string c_ParamName = ":" + std::string(TCHAR_TO_UTF8(*Param));
-
-	try
-	{
-		sqlStatement.bind(c_ParamName, Value);
-	}
-	catch (const SQLite::Exception& e)
-	{
-		(void)e;
-		UE_LOG(LogSmoothSqlite, Error, L"Failed to bind value '%d' to param '%s'", Value, *Param);
-	}
+	Bind<float>(Param, Value, Target);
 }
 
 void USmoothSqlFunctionLibrary::K2_BindQueryParam_String(USqliteStatement* Target, const FString& Param,
                                                          const FString& Value)
 {
-	if (!Target) return;
-	
-	auto& sqlStatement = *Target->GetStatement();
-	std::string c_ParamName = ":" + std::string(TCHAR_TO_UTF8(*Param));
-	std::string c_Val = std::string(TCHAR_TO_UTF8(*Value));
-	
-	try
-	{
-		sqlStatement.bind(c_ParamName, c_Val);
-	}
-	catch (const SQLite::Exception& e)
-	{
-		(void)e;
-		UE_LOG(LogSmoothSqlite, Error, L"Failed to bind value '%s' to param '%s'", *Value, *Param);
-	}
+	Bind<FString>(Param, Value, Target);
 }
 
 void USmoothSqlFunctionLibrary::K2_BindQueryParam_Text(USqliteStatement* Target, const FString& Param,
@@ -101,79 +179,67 @@ void USmoothSqlFunctionLibrary::K2_BindQueryParam_Name(USqliteStatement* Target,
 {
 	K2_BindQueryParam_String(Target, Param, Value.ToString());
 }
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
+
+
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 int32 USmoothSqlFunctionLibrary::GetInt(USqliteStatement* Target, const FString& Column)
 {
-	if (!Target) return int32{};
-
-	auto& sqlStatement = *Target->GetStatement();
-	std::string ColName = TCHAR_TO_UTF8(*Column);
-
-	try
-	{
-		return sqlStatement.getColumn(ColName.c_str()).getInt();
-	}
-	catch (const SQLite::Exception& e)
-	{
-		UE_LOG(LogSmoothSqlite, Error, L"Error retrieving column: %s (%d)", *FString(e.getErrorStr()), e.getErrorCode());
-		return int32{};
-	}
+	return GetFromStatement<int32>(Target, Column);
 }
 
 int64 USmoothSqlFunctionLibrary::GetInt64(USqliteStatement* Target, const FString& Column)
 {
-	if (!Target) return int64{};
-
-	auto& sqlStatement = *Target->GetStatement();
-	std::string ColName = TCHAR_TO_UTF8(*Column);
-
-	
-	try
-	{
-		return sqlStatement.getColumn(ColName.c_str()).getInt64();
-	}
-	catch (const SQLite::Exception& e)
-	{
-		UE_LOG(LogSmoothSqlite, Error, L"Error retrieving column: %s (%d)", *FString(e.getErrorStr()), e.getErrorCode());
-		return int64{};
-	}
+	return GetFromStatement<int64>(Target, Column);
 }
 
 float USmoothSqlFunctionLibrary::GetFloat(USqliteStatement* Target, const FString& Column)
 {
-	if (!Target) return float{};
-
-	auto& sqlStatement = *Target->GetStatement();
-	std::string ColName = TCHAR_TO_UTF8(*Column);
-	
-	try
-	{
-		return sqlStatement.getColumn(ColName.c_str()).getDouble();
-	}
-	catch (const SQLite::Exception& e)
-	{
-		UE_LOG(LogSmoothSqlite, Error, L"Error retrieving column: %s (%d)", *FString(e.getErrorStr()), e.getErrorCode());
-		return float{};
-	}
+	return GetFromStatement<float>(Target, Column);
 }
 
 FString USmoothSqlFunctionLibrary::GetString(USqliteStatement* Target, const FString& Column)
 {
-	if (!Target) return FString{};
-
-	auto& sqlStatement = *Target->GetStatement();
-	std::string ColName = TCHAR_TO_UTF8(*Column);
-	
-	try
-	{
-		return FString(UTF8_TO_TCHAR( sqlStatement.getColumn(ColName.c_str()).getString().c_str() ));
-	}
-	catch (const SQLite::Exception& e)
-	{
-		UE_LOG(LogSmoothSqlite, Error, L"Error retrieving column: %s (%d)", *FString(e.getErrorStr()), e.getErrorCode());
-		return FString{};
-	}
+	return GetFromStatement<FString>(Target, Column);
 }
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+
+
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+int32 USmoothSqlFunctionLibrary::GetInt_Column(FSqliteColumn& Column)
+{
+	return GetFromStructColumn<int32>(Column);
+}
+
+int64 USmoothSqlFunctionLibrary::GetInt64_Column(FSqliteColumn& Column)
+{
+	return GetFromStructColumn<int64>(Column);
+}
+
+float USmoothSqlFunctionLibrary::GetFloat_Column(FSqliteColumn& Column)
+{
+	return GetFromStructColumn<float>(Column);
+}
+
+FString USmoothSqlFunctionLibrary::GetString_Column(FSqliteColumn& Column)
+{
+	return GetFromStructColumn<FString>(Column);
+}
+
+bool USmoothSqlFunctionLibrary::IsValid_Column(FSqliteColumn& Column)
+{
+	return Column.Column.IsValid();
+}
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+
 
 USqliteStatement* USmoothSqlFunctionLibrary::K2_StepStatement(USqliteStatement* Target, bool& Success)
 {
@@ -185,93 +251,14 @@ USqliteStatement* USmoothSqlFunctionLibrary::K2_StepStatement(USqliteStatement* 
 	return Target;
 }
 
-
-
-/**
- * Simple helper template class for getting right value of the column without code duplication
- */
-template<class T>
-struct FColumnGetHelper
+USqliteDatabase* USmoothSqlFunctionLibrary::GetDatabase(const FSqliteDBConnectionParms& Parms)
 {
-	static T Get(const FSqliteColumn& Row) {return T{};}
-};
-
-template<>
-struct FColumnGetHelper<int32>
-{
-	static auto Get(const FSqliteColumn& Row)
+	auto DB = NewObject<USqliteDatabase>();
+	if (DB->InitConnection(Parms))
 	{
-		return Row.Column->getInt();
-	}
-};
-
-template<>
-struct FColumnGetHelper<int64>
-{
-	static auto Get(const FSqliteColumn& Row)
-	{
-		return Row.Column->getInt64();
-	}
-};
-
-template<>
-struct FColumnGetHelper<FString>
-{
-	static auto Get(const FSqliteColumn& Row)
-	{
-		return FString( UTF8_TO_TCHAR(Row.Column->getString().c_str()));
-	}
-};
-
-template<>
-struct FColumnGetHelper<float>
-{
-	static auto Get(const FSqliteColumn& Row)
-	{
-		return (float) Row.Column->getDouble();
-	}
-};
-
-// Main column getter method
-template<class T>
-decltype(auto) GetSomething_Column(FSqliteColumn& Row)
-{
-	if (Row.Column)
-	{
-		try
-		{
-			return FColumnGetHelper<T>::Get(Row);
-		}
-		catch (SQLite::Exception& e)
-		{
-			UE_LOG(LogSmoothSqlite, Display, L"Error occured getting value: %s", *FString(e.getErrorStr()))
-		}
+		return DB;
 	}
 
-	return T{};
-}
-
-int32 USmoothSqlFunctionLibrary::GetInt_Column(FSqliteColumn& Column)
-{
-	return GetSomething_Column<int32>(Column);
-}
-
-int64 USmoothSqlFunctionLibrary::GetInt64_Column(FSqliteColumn& Column)
-{
-	return GetSomething_Column<int64>(Column);
-}
-
-float USmoothSqlFunctionLibrary::GetFloat_Column(FSqliteColumn& Column)
-{
-	return GetSomething_Column<float>(Column);
-}
-
-FString USmoothSqlFunctionLibrary::GetString_Column(FSqliteColumn& Column)
-{
-	return GetSomething_Column<FString>(Column);
-}
-
-bool USmoothSqlFunctionLibrary::IsValid_Column(FSqliteColumn& Column)
-{
-	return Column.Column.IsValid();
+	DB->MarkPendingKill();
+	return nullptr;
 }

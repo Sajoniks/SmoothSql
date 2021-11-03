@@ -4,51 +4,19 @@
 #include "SqliteDatabase.h"
 #include "SmoothSql.h"
 #include "SqliteStatement.h"
-#include "SqliteTransaction.h"
 #include "Kismet/KismetSystemLibrary.h"
-#include "Subsystem/DatabaseSingleton.h"
 
 USqliteDatabase::USqliteDatabase(const FObjectInitializer& ObjectInitializer)
 	: Super(ObjectInitializer)
 {
-	Database = nullptr;
-
-	if (!HasAnyFlags(RF_ClassDefaultObject))
-	{
-		Singleton = GEngine ? GEngine->GetEngineSubsystem<UDatabaseSingleton>() : nullptr;
-	}
 }
 
 bool USqliteDatabase::InitConnection(const FSqliteDBConnectionParms& Params)
 {
-	if (!Database)
+	if (!HasValidConnection())
 	{
-		// Obtain path to project dir
-		const auto GameDir = FPaths::ConvertRelativePathToFull( FPaths::ProjectDir() );
-		const auto DBName = Params.DBName;
-		const auto Folder = Params.Folder;
-
-		// Make sure that path is valid
-		check(!DBName.IsEmpty())
-		check(!Folder.IsEmpty())
-		
-		// Make path to DB
-		auto DBDir = FPaths::Combine(GameDir, Folder, DBName);
-			 DBDir = FPaths::SetExtension(DBDir, "db");
-
-		// Try to open DB
-		try
-		{
-			Database.Reset(new SQLite::Database(std::string(TCHAR_TO_UTF8(*DBDir)), SQLite::OPEN_READWRITE, Params.BusyTimeout));
-			UE_LOG(LogSmoothSqlite, Display, L"Opened database '%s', located '%s'", *DBName, *DBDir);
-			return true;
-		}
-		catch (const SQLite::Exception& e)
-		{
-			UE_LOG(LogSmoothSqlite, Error, L"%s", *FString(e.getErrorStr()))
-			Database.Reset();
-			return false;
-		}
+		DBParams = Params;
+		return true;
 	}
 
 	return false;
@@ -56,13 +24,43 @@ bool USqliteDatabase::InitConnection(const FSqliteDBConnectionParms& Params)
 
 void USqliteDatabase::CloseConnection()
 {
-	if (Database)
+	if (HasValidConnection())
 	{
 		// Release underlaying db
 		Database.Release();
+		RemoveFromRoot();
+	}
+}
 
-		// Notify singleton that connection was destroyed
-		Singleton->CloseConnection(this);
+void USqliteDatabase::OpenConnection()
+{
+	if (HasValidConnection()) return;
+	
+	
+	// Obtain path to project dir
+	const auto GameDir = FPaths::ConvertRelativePathToFull( FPaths::ProjectDir() );
+	const auto DBName = DBParams.DBName;
+	const auto Folder = DBParams.Folder;
+
+	// Make sure that path is valid
+	check(!DBName.IsEmpty())
+	check(!Folder.IsEmpty())
+		
+	// Make path to DB
+	auto DBDir = FPaths::Combine(GameDir, Folder, DBName);
+	DBDir = FPaths::SetExtension(DBDir, "db");
+
+	// Try to open DB
+	try
+	{
+		Database.Reset(new SQLite::Database(std::string(TCHAR_TO_UTF8(*DBDir)), SQLite::OPEN_READWRITE, DBParams.BusyTimeout));
+		AddToRoot();
+		UE_LOG(LogSmoothSqlite, Display, L"Opened database '%s', located '%s'", *DBName, *DBDir);
+	}
+	catch (const SQLite::Exception& e)
+	{
+		UE_LOG(LogSmoothSqlite, Error, L"Error occured while Open: %s", *FString(e.getErrorStr()))
+		Database.Reset();
 	}
 }
 
@@ -73,15 +71,11 @@ bool USqliteDatabase::HasValidConnection() const
 
 bool USqliteDatabase::CommitTransaction()
 {
-	if (CurrentTransaction)
+	if (HasActiveTransaction())
 	{
-		CurrentTransaction->Commit();
-
-		if (!CurrentTransaction->IsValidLowLevel())
-		{
-			CurrentTransaction = nullptr;
-			return true;
-		}
+		Transaction->commit();
+		Transaction.Reset();
+		return true;
 	}
 
 	return false;
@@ -89,15 +83,10 @@ bool USqliteDatabase::CommitTransaction()
 
 bool USqliteDatabase::RollbackTransaction()
 {
-	if (CurrentTransaction)
+	if (HasActiveTransaction())
 	{
-		CurrentTransaction->Rollback();
-
-		if (!CurrentTransaction->IsValidLowLevel())
-		{
-			CurrentTransaction = nullptr;
-			return true;
-		}
+		Transaction.Reset();
+		return true;
 	}
 
 	return false;
@@ -125,33 +114,18 @@ USqliteStatement* USqliteDatabase::CreateQuery(const FString& QueryString)
 	return nullptr;
 }
 
-USqliteTransaction* USqliteDatabase::BeginTransaction()
+void USqliteDatabase::BeginTransaction()
 {
-	if (HasValidConnection() && !CurrentTransaction)
+	if (!HasActiveTransaction() && HasValidConnection())
 	{
-		CurrentTransaction = NewObject<USqliteTransaction>();
-		if (CurrentTransaction->InitTransaction(*GetDatabaseConnection()))
-		{
-			return CurrentTransaction;
-		}
-		else
-		{
-			CurrentTransaction->MarkPendingKill();
-			CurrentTransaction = nullptr;
-		}
+		Transaction.Reset(new SQLite::Transaction(*GetDatabaseConnection()));
 	}
-
-	return nullptr;
 }
+
 
 bool USqliteDatabase::HasActiveTransaction() const
 {
-	return CurrentTransaction != nullptr && CurrentTransaction->IsValidLowLevelFast();
-}
-
-USqliteTransaction* USqliteDatabase::GetTransaction() const
-{
-	return CurrentTransaction;
+	return Transaction.IsValid();
 }
 
 bool USqliteDatabase::Execute(const FString& Query)

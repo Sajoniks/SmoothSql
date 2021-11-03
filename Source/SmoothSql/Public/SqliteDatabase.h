@@ -6,13 +6,12 @@
 #include "UObject/NoExportTypes.h"
 #include "Data/SmoothSqliteDataTypes.h"
 #include "SQLiteCpp/Database.h"
+#include "SQLiteCpp/Transaction.h"
 
 
 #include "SqliteDatabase.generated.h"
 
 
-
-class UDatabaseSingleton;
 class USqliteTransaction;
 class USqliteStatement;
 
@@ -31,7 +30,7 @@ public:
 	 * @return True, if connection was established
 	 */
 	bool InitConnection(const FSqliteDBConnectionParms& Params);
-
+	
 	/**
 	 * Explicitly close the connection
 	 */
@@ -39,10 +38,48 @@ public:
 	void CloseConnection();
 
 	/**
+	 *
+	 */
+	UFUNCTION(BlueprintCallable, Category="SmoothSqlite|Connection")
+	void OpenConnection();
+
+	
+	/**
 	 * Check if underlaying object has any valid DB connection
 	 * @return True, if valid DB connection object is associated with this file
 	 */
 	bool HasValidConnection() const;
+
+	/**
+	 * Get wrapped sqlite database connection
+	 * @return Ptr to SQLite::Database
+	 */
+	SQLite::Database* GetDatabaseConnection() const;
+
+	
+
+
+	/**
+	 * Create query
+	 * @param [in] QueryString SQL query string
+	 * @return Statement object
+	 */
+	UFUNCTION(BlueprintCallable, Category = "SmoothSqlite|Query")
+	USqliteStatement* CreateQuery(const FString& QueryString);
+
+
+	
+	/**
+	 * Start SQL transaction
+	 */
+	UFUNCTION(BlueprintCallable, Category = "SmoothSqlite|Query")
+	void BeginTransaction();
+
+	/**
+	 * If any transaction is active
+	 */
+	UFUNCTION(BlueprintCallable, Category = "SmoothSqlite|Query")
+	bool HasActiveTransaction() const;
 
 	/**
 	 * Commit transaction (if any)
@@ -59,39 +96,6 @@ public:
 	bool RollbackTransaction();
 
 	
-	/**
-	 * Get wrapped sqlite database connection
-	 * @return Ptr to SQLite::Database
-	 */
-	SQLite::Database* GetDatabaseConnection() const;
-
-	/**
-	 * Create query
-	 * @param [in] QueryString SQL query string
-	 * @return Statement object
-	 */
-	UFUNCTION(BlueprintCallable, Category = "SmoothSqlite|Query")
-	USqliteStatement* CreateQuery(const FString& QueryString);
-
-	/**
-	 * Start SQL transaction
-	 */
-	UFUNCTION(BlueprintCallable, Category = "SmoothSqlite|Query")
-	USqliteTransaction* BeginTransaction();
-
-	/**
-	 * If any transaction is active
-	 */
-	UFUNCTION(BlueprintCallable, Category = "SmoothSqlite|Query")
-	bool HasActiveTransaction() const;
-
-	/**
-	 * Get current active transaction (if any)
-	 * @return Transaction object
-	 */
-	UFUNCTION(BlueprintCallable, Category = "SmoothSqlite|Query")
-	USqliteTransaction* GetTransaction() const;
-		
 	
 	/**
 	 * Execute query without result set
@@ -117,10 +121,7 @@ public:
 private:
 	
 	TUniquePtr<SQLite::Database> Database;	///< Underlaying database
+	TUniquePtr<SQLite::Transaction> Transaction;
 
-	UPROPERTY()
-	UDatabaseSingleton* Singleton;			///< Database manager
-
-	UPROPERTY()
-	USqliteTransaction* CurrentTransaction; ///< Current transaction
+	FSqliteDBConnectionParms DBParams;
 };

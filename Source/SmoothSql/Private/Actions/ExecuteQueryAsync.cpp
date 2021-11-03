@@ -4,7 +4,6 @@
 #include "ExecuteQueryAsync.h"
 
 #include "SqliteStatement.h"
-#include "Subsystem/DatabaseSingleton.h"
 
 bool UExecuteQueryAsync::bActive = false;
 
@@ -30,7 +29,7 @@ void UExecuteQueryAsync::Step()
 		Completed.Broadcast();
 
 		// Notify others that query on given statement finished
-		Singleton->OnAsyncQueryEnd.Broadcast(Statement);
+		// Singleton->OnAsyncQueryEnd.Broadcast(Statement);
 	}
 }
 
@@ -40,7 +39,6 @@ UExecuteQueryAsync* UExecuteQueryAsync::ForEachResultAsync(UObject* WorldContext
 	{
 		Node->WorldContext = WorldContextObject;
 		Node->Statement = Statement;
-		Node->Singleton = GEngine->GetEngineSubsystem<UDatabaseSingleton>();
 		return Node;
 	}
 
@@ -63,7 +61,7 @@ void UExecuteQueryAsync::Activate()
 		World->GetTimerManager().SetTimer(TimerHandle, FTimerDelegate::CreateUObject(this, &UExecuteQueryAsync::Step), 1/60.f, true);
 
 		// Broadcast that query started
-		Singleton->OnAsyncQueryBegin.Broadcast(Statement);
+		// Singleton->OnAsyncQueryBegin.Broadcast(Statement);
 	}
 }
 

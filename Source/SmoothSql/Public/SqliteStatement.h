@@ -43,6 +43,11 @@ public:
 	 */
 	UFUNCTION(BlueprintCallable, Category="SmoothSqlite|Statement")
 	void ClearBindings();
+
+	
+	UFUNCTION(BlueprintCallable, Category="SmoothSqlite|Statement")
+	void ResetAll();
+
 	
 	/**
 	 * Execute one-step query without result set

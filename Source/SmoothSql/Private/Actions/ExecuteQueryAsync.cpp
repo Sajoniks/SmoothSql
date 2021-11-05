@@ -3,15 +3,12 @@
 
 #include "ExecuteQueryAsync.h"
 
-#include "SqliteStatement.h"
-
 bool UExecuteQueryAsync::bActive = false;
 
 
 void UExecuteQueryAsync::Step()
 {
-	auto sqlStatement = Statement->GetStatement();
-	if (sqlStatement->executeStep())
+	if (Statement.Fetch())
 	{
 		// Broadcast that we got something
 		Body.Broadcast(Statement);
@@ -33,7 +30,7 @@ void UExecuteQueryAsync::Step()
 	}
 }
 
-UExecuteQueryAsync* UExecuteQueryAsync::ForEachResultAsync(UObject* WorldContextObject, USqliteStatement* Statement)
+UExecuteQueryAsync* UExecuteQueryAsync::ForEachResultAsync(UObject* WorldContextObject, const FDbStatement& Statement)
 {
 	if (UExecuteQueryAsync* Node = NewObject<UExecuteQueryAsync>())
 	{
@@ -59,9 +56,6 @@ void UExecuteQueryAsync::Activate()
 	{
 		bActive = true;
 		World->GetTimerManager().SetTimer(TimerHandle, FTimerDelegate::CreateUObject(this, &UExecuteQueryAsync::Step), 1/60.f, true);
-
-		// Broadcast that query started
-		// Singleton->OnAsyncQueryBegin.Broadcast(Statement);
 	}
 }
 

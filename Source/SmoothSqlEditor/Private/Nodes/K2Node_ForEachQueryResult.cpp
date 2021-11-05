@@ -11,8 +11,6 @@
 #include "K2Node_IfThenElse.h"
 #include "KismetCompiler.h"
 #include "SmoothSqlFunctionLibrary.h"
-#include "SqliteStatement.h"
-
 
 static const FName InnerLoopName = "Body";
 
@@ -54,9 +52,9 @@ void UK2Node_ForEachQueryResult::AllocateDefaultPins()
 	using GS = UEdGraphSchema_K2;
 	
 	CreatePin(EGPD_Input, GS::PC_Exec, GS::PN_Execute);
-	CreatePin(EGPD_Input, GS::PC_Object, USqliteStatement::StaticClass(), "Target");
+	CreatePin(EGPD_Input, GS::PC_Struct, FDbStatement::StaticStruct(), "Target");
 	CreatePin(EGPD_Output, GS::PC_Exec, InnerLoopName);
-	CreatePin(EGPD_Output, GS::PC_Object, USqliteStatement::StaticClass(), "Statement");
+	CreatePin(EGPD_Output, GS::PC_Struct, FDbStatement::StaticStruct(), "Statement");
 	CreatePin(EGPD_Output, GS::PC_Exec, GS::PN_Completed);
 }
 

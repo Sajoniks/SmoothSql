@@ -9,7 +9,6 @@
 #include "K2Node_CallFunction.h"
 #include "KismetCompiler.h"
 #include "SmoothSqlFunctionLibrary.h"
-#include "SqliteStatement.h"
 #include "Kismet2/BlueprintEditorUtils.h"
 #include "Kismet2/CompilerResultsLog.h"
 
@@ -58,7 +57,7 @@ void UK2Node_BindQueryParam::AllocateDefaultPins()
 	CreatePin(EGPD_Input, UEdGraphSchema_K2::PC_Exec, UEdGraphSchema_K2::PN_Execute);
 	CreatePin(EGPD_Output, UEdGraphSchema_K2::PC_Exec, UEdGraphSchema_K2::PN_Then);
 
-	CreatePin(EGPD_Input, UEdGraphSchema_K2::PC_Object, USqliteStatement::StaticClass(), "Target");
+	CreatePin(EGPD_Input, UEdGraphSchema_K2::PC_Struct, FDbStatement::StaticStruct(), "Target");
 	CreatePin(EGPD_Input, UEdGraphSchema_K2::PC_String, ParamPinName);
 	CreatePin(EGPD_Input, UEdGraphSchema_K2::PC_Wildcard, ValuePinName);
 }

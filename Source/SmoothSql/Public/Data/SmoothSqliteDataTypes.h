@@ -100,7 +100,12 @@ struct FDbConnectionHandle
 
 	bool IsValid() const {return ConnectionPtr.IsValid();}
 	bool IsValidTransaction() const {return TransactionPtr.IsValid();}
-	void Invalidate() {TransactionPtr.Reset();}
+
+	void Invalidate()
+	{
+		ConnectionPtr.Reset();
+		TransactionPtr.Reset();
+	}
 
 	UPROPERTY(BlueprintReadOnly, Category="DbHandle")
 	FSqliteDBConnectionParms ConnectionParms;

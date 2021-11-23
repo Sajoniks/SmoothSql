@@ -326,4 +326,14 @@ void USmoothSqlFunctionLibrary::Reset(FDbStatement& Statement)
 	Statement.Reset();
 }
 
+void USmoothSqlFunctionLibrary::CloseStatement(FDbStatement& Statement)
+{
+	Statement.Invalidate();
+}
+
+void USmoothSqlFunctionLibrary::CloseConnection(FDbConnectionHandle& Handle)
+{
+	Handle.Invalidate();
+}
+
 

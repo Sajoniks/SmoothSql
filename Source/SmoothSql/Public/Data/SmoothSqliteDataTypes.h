@@ -100,7 +100,7 @@ struct FDbConnectionHandle
 
 	bool IsValid() const {return ConnectionPtr.IsValid();}
 	bool IsValidTransaction() const {return TransactionPtr.IsValid();}
-
+	void Invalidate() {TransactionPtr.Reset();}
 
 	UPROPERTY(BlueprintReadOnly, Category="DbHandle")
 	FSqliteDBConnectionParms ConnectionParms;
@@ -137,6 +137,8 @@ struct FDbStatement
 
 	bool IsValid() const {return StatementPtr.IsValid(); }
 	bool IsDone() const {return IsValid() ? StatementPtr->isDone() : true;}
+
+	void Invalidate() {StatementPtr.Reset();}
 
 private:
 	TSharedPtr<SQLite::Statement> StatementPtr;

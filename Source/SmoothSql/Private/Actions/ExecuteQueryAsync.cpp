@@ -21,6 +21,7 @@ void UExecuteQueryAsync::Step()
 		TimerHandle.Invalidate();
 
 		// No queries active
+		Statement.Invalidate();
 		bActive = false;
 				
 		Completed.Broadcast();

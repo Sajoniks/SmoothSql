@@ -185,4 +185,13 @@ public:
 
 	UFUNCTION(BlueprintCallable, Category = "SmoothSqlite|Statement")
 	static void Reset(UPARAM(ref) FDbStatement& Statement);	
+
+
+	
+	UFUNCTION(BlueprintCallable, Category = "SmoothSqlite|Statement")
+	static void CloseStatement(UPARAM(ref) FDbStatement& Statement);
+	
+	UFUNCTION(BlueprintCallable, Category = "SmoothSqlite|Connection")
+    static void CloseConnection(UPARAM(ref) FDbConnectionHandle& Handle);
+	
 };

@@ -70,7 +70,7 @@ void UExecuteAsync::CheckCompletion()
 			TaskPtr.Key = nullptr;
 			World->GetTimerManager().ClearTimer(CompletionCheckHandle);
 			CompletionCheckHandle.Invalidate();
-
+			
 			Completed.Broadcast();
 		}
 	}

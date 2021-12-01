@@ -18,7 +18,7 @@ namespace SQLite
 /**
  * 
  */
-UCLASS()
+UCLASS(BlueprintType)
 class SMOOTHSQL_API UDbStmt : public UObject
 {
 

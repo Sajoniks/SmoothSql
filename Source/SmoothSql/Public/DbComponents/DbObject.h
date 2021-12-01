@@ -12,7 +12,7 @@ class UDbStmt;
 /**
  * 
  */
-UCLASS()
+UCLASS(BlueprintType)
 class SMOOTHSQL_API UDbObject : public UObject
 {
 	GENERATED_BODY()

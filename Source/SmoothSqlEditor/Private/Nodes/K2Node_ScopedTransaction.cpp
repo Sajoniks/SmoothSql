@@ -14,6 +14,7 @@
 #include "KismetCompiler.h"
 #include "SmoothSqlFunctionLibrary.h"
 #include "Data/SmoothSqliteDataTypes.h"
+#include "DbComponents/DbObject.h"
 #include "Kismet/KismetMathLibrary.h"
 #include "Kismet/KismetSystemLibrary.h"
 
@@ -105,7 +106,7 @@ void UK2Node_ScopedTransaction::AllocateDefaultPins()
 	// CreatePin(EGPD_Input, GS::PC_Boolean, CreateNewConnectionPinName);
 	CreatePin(EGPD_Input, GS::PC_Struct, FSqliteDBConnectionParms::StaticStruct(), DbConnectionParmsPinName);
 	CreatePin(EGPD_Output, GS::PC_Exec, GS::PN_Then);
-	CreatePin(EGPD_Output, GS::PC_Struct, FDbConnectionHandle::StaticStruct(), DbConnectionOutPinName);
+	CreatePin(EGPD_Output, GS::PC_Object, UDbObject::StaticClass(), DbConnectionOutPinName);
 	CreatePin(EGPD_Output, GS::PC_Exec, ScopeExitPinName);
 }
 
@@ -214,7 +215,7 @@ void UK2Node_ScopedTransaction::ExpandNode(FKismetCompilerContext& CompilerConte
 
 	UK2Node_TemporaryVariable* TempVar = CompilerContext.SpawnIntermediateNode<UK2Node_TemporaryVariable>(this, SourceGraph);
 	TempVar->VariableType.PinCategory = UEdGraphSchema_K2::PC_Struct;
-	TempVar->VariableType.PinSubCategoryObject = FDbConnectionHandle::StaticStruct();
+	TempVar->VariableType.PinSubCategoryObject = UDbObject::StaticClass();
 	TempVar->AllocateDefaultPins();
 
 	UK2Node_AssignmentStatement* TempVarAssign = CompilerContext.SpawnIntermediateNode<UK2Node_AssignmentStatement>(this, SourceGraph);

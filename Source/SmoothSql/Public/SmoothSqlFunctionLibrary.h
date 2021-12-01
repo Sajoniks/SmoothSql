@@ -8,19 +8,8 @@
 #include "SmoothSqlFunctionLibrary.generated.h"
 
 
-class USqliteDatabase;
-class USqliteStatement;
-
-#define DB_FUNC_SIGNATURE(ReturnType, Func) \
-UFUNCTION(BlueprintCallable, Category = "SmoothSqlite|Connection") \
-static ReturnType Func(UPARAM(ref) FDbConnectionHandle& Handle
-
-#define CREATE_DB_FUNCTION(ReturnType, Func) \
-DB_FUNC_SIGNATURE(ReturnType, Func))
-
-#define CREATE_DB_FUNCTION_OneParam(ReturnType, Func, Param1Type, Param1Name) \
-DB_FUNC_SIGNATURE(ReturnType, Func), Param1Type Param1Name)
-
+class UDbObject;
+class UDbStmt;
 
 
 UCLASS()
@@ -31,39 +20,72 @@ class SMOOTHSQL_API USmoothSqlFunctionLibrary : public UBlueprintFunctionLibrary
 public:
 	
 	UFUNCTION(BlueprintCallable, BlueprintInternalUseOnly, Category="SmoothSqlite|Bind")
-	static void K2_BindQueryParam_Int(UPARAM(ref) FDbStatement& Target, const FString& Param, int32 Value);
+	static void K2_BindQueryParam_Int(UDbStmt* Target, const FString& Param, int32 Value);
 
 	UFUNCTION(BlueprintCallable, BlueprintInternalUseOnly, Category="SmoothSqlite|Bind")
-	static void K2_BindQueryParam_Int64(UPARAM(ref) FDbStatement& Target, const FString& Param, int64 Value);
+	static void K2_BindQueryParam_Int64(UDbStmt* Target, const FString& Param, int64 Value);
 
 	UFUNCTION(BlueprintCallable, BlueprintInternalUseOnly, Category="SmoothSqlite|Bind")
-	static void K2_BindQueryParam_Float(UPARAM(ref) FDbStatement& Target, const FString& Param, float Value);
+	static void K2_BindQueryParam_Float(UDbStmt* Target, const FString& Param, float Value);
 
 	UFUNCTION(BlueprintCallable, BlueprintInternalUseOnly, Category="SmoothSqlite|Bind")
-	static void K2_BindQueryParam_String(UPARAM(ref) FDbStatement& Target, const FString& Param, const FString& Value);
+	static void K2_BindQueryParam_String(UDbStmt*  Target, const FString& Param, const FString& Value);
 
 	UFUNCTION(BlueprintCallable, BlueprintInternalUseOnly, Category="SmoothSqlite|Bind")
-	static void K2_BindQueryParam_Text(UPARAM(ref) FDbStatement& Target, const FString& Param, const FText& Value);
+	static void K2_BindQueryParam_Text(UDbStmt*  Target, const FString& Param, const FText& Value);
 
 	UFUNCTION(BlueprintCallable, BlueprintInternalUseOnly, Category="SmoothSqlite|Bind")
-	static void K2_BindQueryParam_Name(UPARAM(ref) FDbStatement& Target, const FString& Param, const FName& Value);
+	static void K2_BindQueryParam_Name(UDbStmt*  Target, const FString& Param, const FName& Value);
 
 
 	/// Statement Getters
 	
-	UFUNCTION(BlueprintCallable, BlueprintPure, Category = "SmoothSqlite|Query") 
-	static int32 GetInt(UPARAM(ref) FDbStatement& Target, const FString& Column);
+#define DB_STMT_GETTER_IDX(Name, Type)\
+	static Type Get##Name##_Stmt_Idx(UDbStmt* Target, int32 ColumnIdx);
+#define DB_STMT_GETTER_NAME(Name, Type)\
+	static Type Get##Name##_Stmt_Str(UDbStmt* Target, const FString& ColumnName);
 
-	UFUNCTION(BlueprintCallable, BlueprintPure, Category = "SmoothSqlite|Query") 
-	static int64 GetInt64(UPARAM(ref) FDbStatement& Target, const FString& Column);
+	
+	UFUNCTION(BlueprintCallable, BlueprintPure, Category = "SmoothSqlite|Query", meta=(DisplayName="Get Int (Using Index)")) 
+	static int32 GetInt_Stmt_Idx(UDbStmt* Target, int32 ColumnIdx);
 
-	UFUNCTION(BlueprintCallable, BlueprintPure, Category = "SmoothSqlite|Query") 
-	static float GetFloat(UPARAM(ref) FDbStatement& Target, const FString& Column);
+	UFUNCTION(BlueprintCallable, BlueprintPure, Category = "SmoothSqlite|Query", meta=(DisplayName="Get Int (Using Name)")) 
+	static int32 GetInt_Stmt_Str(UDbStmt* Target, const FString& ColumnName);
+	
+	
+	UFUNCTION(BlueprintCallable, BlueprintPure, Category = "SmoothSqlite|Query", meta=(DisplayName="Get Int64 (Using Index)")) 
+	static int64 GetInt64_Stmt_Idx(UDbStmt* Target, int32 ColumnIdx);
+	
+	UFUNCTION(BlueprintCallable, BlueprintPure, Category = "SmoothSqlite|Query", meta=(DisplayName="Get Int64 (Using Name)")) 
+	static int64 GetInt64_Stmt_Str(UDbStmt* Target, const FString& ColumnName);
 
-	UFUNCTION(BlueprintCallable, BlueprintPure, Category = "SmoothSqlite|Query") 
-	static FString GetString(UPARAM(ref) FDbStatement& Target, const FString& Column);
+	
+	UFUNCTION(BlueprintCallable, BlueprintPure, Category = "SmoothSqlite|Query", meta=(DisplayName="Get Float (Using Name)")) 
+	static float GetFloat_Stmt_Str(UDbStmt* Target, const FString& ColumnName);
+
+	UFUNCTION(BlueprintCallable, BlueprintPure, Category = "SmoothSqlite|Query", meta=(DisplayName="Get Float (Using Idx)")) 	
+	static float GetFloat_Stmt_Idx(UDbStmt* Target, int32 ColumnIdx);
+
+	
+	UFUNCTION(BlueprintCallable, BlueprintPure, Category = "SmoothSqlite|Query", meta=(DisplayName="Get String (Using Name)"))
+	static FString GetString_Stmt_Str(UDbStmt* Target, const FString& ColumnName);
+
+	UFUNCTION(BlueprintCallable, BlueprintPure, Category = "SmoothSqlite|Query", meta=(DisplayName="Get String (Using Idx)")) 
+	static FString GetString_Stmt_Idx(UDbStmt* Target, int32 ColumnIdx);
+
+	
+	UFUNCTION(BlueprintCallable, BlueprintPure, Category = "SmoothSqlite|Query", meta=(DisplayName="Get Name (Using Idx)"))
+	static FName GetName_Stmt_Idx(UDbStmt* Target, int32 ColumnIdx);
+
+	UFUNCTION(BlueprintCallable, BlueprintPure, Category = "SmoothSqlite|Query", meta=(DisplayName="Get Name (Using Name)"))
+	static FName GetName_Stmt_Str(UDbStmt* Target, const FString& ColumnName);
+	
+#undef DB_STMT_GETTER_IDX
+#undef DB_STMT_GETTER_NAME	
 
 
+#define DB_COL_GETTER(Type, Name)\
+	static Type Get##Name##_Column(UPARAM(ref) FSqliteColumn& Column);
 	
 	/// Column getters
 	
@@ -79,13 +101,16 @@ public:
 	UFUNCTION(BlueprintCallable, BlueprintPure, Category = "SmoothSqlite|Query", meta=(DisplayName="Get String")) 
 	static FString GetString_Column(UPARAM(ref) FSqliteColumn& Column);
 
+	UFUNCTION(BlueprintCallable, BlueprintPure, Category = "SmoothSqlite|Query", meta=(DisplayName="Get Name"))
+	static FName GetName_Column(UPARAM(ref) FSqliteColumn& Column);
+
 	UFUNCTION(BlueprintCallable, BlueprintPure, Category = "SmoothSqlite|Query", meta=(DisplayName="Is Valid"))
 	static bool IsValid_Column(UPARAM(ref) FSqliteColumn& Column);
 
-
+#undef DB_COL_GETTER
 	
 	UFUNCTION(BlueprintCallable, BlueprintInternalUseOnly, Category="SmoothSqlite|Bind")
-	static FDbStatement& K2_StepStatement(UPARAM(ref) FDbStatement& Target, bool& Success);
+	static UDbStmt* K2_StepStatement(UDbStmt* Target, bool& Success);
 
 
 
@@ -93,96 +118,21 @@ public:
 	/// Db handle related functions
 
 	/**
-	 * Open connection
+	 * @brief Open connection
+	 *
+	 * Opens connection to SQLite Database using parameters defined in DbDefaultSettings
 	 * @return Handle to connection
 	 */
 	UFUNCTION(BlueprintCallable, Category = "SmoothSqlite|Connection")
-	static FDbConnectionHandle OpenDbConnection(const FSqliteDBConnectionParms& Parms);
+	static UDbObject* OpenDbConnection();
 
 	/**
-	 * Make prepared statement
-	 * @param [in] Handle Db connection handle
-	 * @param [in] Query Query to execute
-	 * @return Statement
+	 * @brief Open database and execute SQL
+	 *
+	 * Opens connection in-place, executes code and then closes connection
+	 * @param [in] SQL SQL to execute
+	 * @return Number of changes
 	 */
 	UFUNCTION(BlueprintCallable, Category = "SmoothSqlite|Connection")
-	static FDbStatement Query(UPARAM(ref) FDbConnectionHandle& Handle, const FString& Query);
-
-	/**
-	 * Check if handle is actually pointing to something
-	 * @param [in] Handle Db connection handle
-	 * @return True, if has valid connection
-	 */
-	UFUNCTION(BlueprintCallable, BlueprintPure, Category = "SmoothSqlite|Connection", meta = (DisplayName="Is Valid"))
-	static bool IsValid_DbHandle(const FDbConnectionHandle& Handle);
-
-	/**
-	* Check if handle is actually pointing to something
-	* @param [in] Handle Db connection handle
-	* @return True, if has valid connection
-	*/
-	UFUNCTION(BlueprintCallable, BlueprintPure, Category = "SmoothSqlite|Connection", meta = (DisplayName="Is Valid"))
-	static bool IsValid_DbTransaction(const FDbConnectionHandle& Handle);
-	
-	/**
-	 * Begin db transaction
-	 * @param [in] Handle Db connection handle
-	 * @return True, if no errors 
-	 */
-	UFUNCTION(BlueprintCallable, Category = "SmoothSqlite|Connection")
-	static bool BeginTransaction(UPARAM(ref) FDbConnectionHandle& Handle);
-
-	/**
-	 * Commit transaction (if any)
-	 * @param [in] Handle Db connection handle
-	 * @return True, if no errors
-	 */
-	UFUNCTION(BlueprintCallable, Category = "SmoothSqlite|Connection")
-	static bool CommitTransaction(UPARAM(ref) FDbConnectionHandle& Handle);
-
-	/**
-	 * Rollback transaction (if any)
-	 * @param [in] Handle Db connection handle
-	 * @return True, if no errors
-	 */
-	UFUNCTION(BlueprintCallable, Category = "SmoothSqlite|Connection")
-	static bool RollbackTransaction(UPARAM(ref) FDbConnectionHandle& Handle);
-	
-	/**
-	 * Execute query
-	 * @param [in] Handle Db connection handle
-	 * @param [in] Query Query to execute
-	 * @return True, if no errors
-	 */	
-	UFUNCTION(BlueprintCallable, Category = "SmoothSqlite|Connection")
-	static bool Execute(UPARAM(ref) FDbConnectionHandle& Handle, const FString& Query);
-
-	/**
-	 * Execute query and get first column
-	 * @param [in] Handle Db connection handle
-	 * @param [in] Query Query to execute
-	 * @return True, if no errors
-	 */
-	UFUNCTION(BlueprintCallable, Category = "SmoothSqlite|Connection")
-	static FSqliteColumn Fetch(UPARAM(ref) FDbConnectionHandle& Handle, const FString& Query);
-
-
-
-	UFUNCTION(BlueprintCallable, BlueprintPure, Category = "SmoothSqlite|Statement", meta = (DisplayName="Is Valid"))
-	static bool IsValid_DbStatement(const FDbStatement& Handle);
-
-	UFUNCTION(BlueprintCallable, BlueprintPure, Category = "SmoothSqlite|Statement", meta = (DisplayName="Is Valid"))
-	static bool IsDone(const FDbStatement& Handle);
-
-	UFUNCTION(BlueprintCallable, Category = "SmoothSqlite|Statement", meta=(DisplayName="Execute"))
-	static int32 Execute_Statement(UPARAM(ref) FDbStatement& Statement);
-
-	UFUNCTION(BlueprintCallable, Category = "SmoothSqlite|Statement", meta=(DisplayName="Fetch"))
-	static bool Fetch_Statement(UPARAM(ref) FDbStatement& Statement);
-
-	UFUNCTION(BlueprintCallable, Category = "SmoothSqlite|Statement")
-	static void ClearBinds(UPARAM(ref) FDbStatement& Statement);
-
-	UFUNCTION(BlueprintCallable, Category = "SmoothSqlite|Statement")
-	static void Reset(UPARAM(ref) FDbStatement& Statement);	
+	static int32 ExecuteInline(const FString& SQL);
 };

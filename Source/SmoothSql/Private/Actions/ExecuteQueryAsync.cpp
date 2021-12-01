@@ -3,15 +3,17 @@
 
 #include "ExecuteQueryAsync.h"
 
+#include "DbComponents/DbStmt.h"
+
 bool UExecuteQueryAsync::bActive = false;
 
 
 void UExecuteQueryAsync::Step()
 {
-	if (Statement.Fetch())
+	if (Stmt->Fetch())
 	{
 		// Broadcast that we got something
-		Body.Broadcast(Statement);
+		Body.Broadcast();
 	}
 	else
 	{
@@ -21,6 +23,7 @@ void UExecuteQueryAsync::Step()
 		TimerHandle.Invalidate();
 
 		// No queries active
+		Stmt = nullptr;
 		bActive = false;
 				
 		Completed.Broadcast();
@@ -30,12 +33,12 @@ void UExecuteQueryAsync::Step()
 	}
 }
 
-UExecuteQueryAsync* UExecuteQueryAsync::ForEachResultAsync(UObject* WorldContextObject, const FDbStatement& Statement)
+UExecuteQueryAsync* UExecuteQueryAsync::ForEachResultAsync(UObject* WorldContextObject, UDbStmt* Statement)
 {
 	if (UExecuteQueryAsync* Node = NewObject<UExecuteQueryAsync>())
 	{
 		Node->WorldContext = WorldContextObject;
-		Node->Statement = Statement;
+		Node->Stmt = Statement;
 		return Node;
 	}
 

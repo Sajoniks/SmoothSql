@@ -24,7 +24,7 @@ class SMOOTHSQL_API UDbObject : public UObject
 	/**
 	 * @brief Initialize underlying SQLite::Database object
 	 */
-	void Init();
+	void Init(int32 OpenFlags);
 
 	/**
 	 *
@@ -45,6 +45,11 @@ public:
 	 */
 	UFUNCTION(BlueprintCallable, Category="SmoothSql|Database|Get", meta=(DisplayName="Connection Is Valid"))
 	bool DbObjectIsValid() const { return bValid; }
+
+	static bool DbObjectIsValid(const UDbObject* Object)
+	{
+		return IsValid(Object) && Object->bValid;
+	}
 
 	/**
 	 *
@@ -81,7 +86,7 @@ public:
 	 *
 	 */
 	UFUNCTION(BlueprintCallable, Category="SmoothSql|Database|Action")
-	bool StartDbTransaction();
+	bool StartDbTransaction(EDbTransactionFlags Flags = EDbTransactionFlags::Deferred);
 
 	/**
 	 *
@@ -100,7 +105,13 @@ public:
 	 */
 	UFUNCTION(BlueprintCallable, Category="SmoothSql|Database|Action")
 	void MakeBackup();
+
+
+	UFUNCTION(BlueprintCallable, Category="SmoothSql|Database|Get")
+	bool IsBusy() const;
 	
+	UFUNCTION(BlueprintCallable, Category="SmoothSql|Database|Get")
+	bool IsLocked() const;
 	
 	/**
 	 *

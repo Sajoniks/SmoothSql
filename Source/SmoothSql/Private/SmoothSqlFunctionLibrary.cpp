@@ -263,6 +263,13 @@ bool USmoothSqlFunctionLibrary::IsValid_Column(FSqliteColumn& Column)
 
 UDbStmt* USmoothSqlFunctionLibrary::K2_StepStatement(UDbStmt* Target, bool& Success)
 {
+	if (!Target)
+	{
+		UE_LOG(LogSmoothSqlite, Error, L"Null statement while K2_StepStatement!");
+		Success = false;
+		return nullptr;
+	}
+	
 	if (Target->DbStmtIsValid())
 	{
 		Success = Target->Fetch();
@@ -271,15 +278,20 @@ UDbStmt* USmoothSqlFunctionLibrary::K2_StepStatement(UDbStmt* Target, bool& Succ
 	return Target;
 }
 
-UDbObject* USmoothSqlFunctionLibrary::OpenDbConnection()
+UDbObject* USmoothSqlFunctionLibrary::OpenDbConnection(int32 OpenFlags)
 {
 	if (auto Obj = NewObject<UDbObject>())
 	{
-		Obj->Init();
+		Obj->Init(OpenFlags);
 		return Obj;
 	}
 
 	return nullptr;
+}
+
+bool USmoothSqlFunctionLibrary::IsValid_DbConnection(UDbObject* Object)
+{
+	return UDbObject::DbObjectIsValid(Object);
 }
 
 int32 USmoothSqlFunctionLibrary::ExecuteInline(const FString& SQL)

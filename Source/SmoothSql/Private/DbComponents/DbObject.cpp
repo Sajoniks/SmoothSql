@@ -7,7 +7,7 @@
 #include "DbDefaultSettings.h"
 #include "DbComponents/DbStmt.h"
 
-void UDbObject::Init()
+void UDbObject::Init(int32 OpenFlags)
 {
 	bValid = false;
 	if (const auto Settings = GetDefault<UDbDefaultSettings>())
@@ -31,12 +31,37 @@ void UDbObject::Init()
 		// Try to open DB
 		SQLITE_TRY
 		{
+			int32 Flags = 0;
+			if (OpenFlags & SQLITE_GET_FLAG(EDbOpenFlags::ReadOnly))
+				Flags |= SQLite::OPEN_READONLY;
+			
+			if (OpenFlags & SQLITE_GET_FLAG(EDbOpenFlags::ReadWrite))
+				Flags |= SQLite::OPEN_READWRITE;
+			
+			if (OpenFlags & SQLITE_GET_FLAG(EDbOpenFlags::URI))
+				Flags |= SQLite::OPEN_URI;
+			
+			if (OpenFlags & SQLITE_GET_FLAG(EDbOpenFlags::Create))
+				Flags |= SQLite::OPEN_CREATE;
+			
+			if (OpenFlags & SQLITE_GET_FLAG( EDbOpenFlags::NoMutex))
+				Flags |= SQLite::OPEN_NOMUTEX;
+			
+			if (OpenFlags & SQLITE_GET_FLAG(EDbOpenFlags::PrivateCache))
+				Flags |= SQLite::OPEN_PRIVATECACHE;
+			
+			if (OpenFlags & SQLITE_GET_FLAG(EDbOpenFlags::SharedCache))
+				Flags |= SQLite::OPEN_SHAREDCACHE;
+			
+			if (OpenFlags & SQLITE_GET_FLAG(EDbOpenFlags::Memory))
+				Flags |= SQLite::OPEN_MEMORY;
+			
 			// Move
-			RawDb = MakeUnique<SQLite::Database>(SQLite::Database(std::string(TCHAR_TO_UTF8(*DBDir)), SQLite::OPEN_READWRITE, DbParams.BusyTimeout));
+			RawDb = MakeUnique<SQLite::Database>(SQLite::Database(std::string(TCHAR_TO_UTF8(*DBDir)), Flags, DbParams.BusyTimeout));
 			bValid = true;
 
 			// Log
-			Ctx.LogMsg( L"Opened database \"{0}\" in read:write mode", {DbParams.DBName});
+			Ctx.LogMsg( L"Opened database \"{0}\"", {DbParams.DBName});
 		}
 		SQLITE_CATCH
 		{
@@ -48,12 +73,13 @@ void UDbObject::Init()
 	if (!bValid)
 	{
 		ConditionalBeginDestroy();
+		MarkPendingKill();
 	}
 }
 
 int32 UDbObject::GetChangesNum() const
 {
-	if (DbObjectIsValid())
+	if (DbObjectIsValid(this))
 	{
 		return RawDb->getChanges();
 	}
@@ -70,12 +96,13 @@ void UDbObject::Release()
 void UDbObject::Close()
 {
 	Release();
+	MarkPendingKill();
 	ConditionalBeginDestroy();
 }
 
 UDbStmt* UDbObject::Prepare(const FString& SQL)
 {
-	if (DbObjectIsValid())
+	if (DbObjectIsValid(this))
 	{
 		if (auto Stmt = NewObject<UDbStmt>())
 		{
@@ -89,13 +116,17 @@ UDbStmt* UDbObject::Prepare(const FString& SQL)
 			return Stmt;
 		}
 	}
+	else
+	{
+		UE_LOG(LogSmoothSqlite, Warning, L"Tried to access NULL DbObject!")
+	}
 
 	return nullptr;
 }
 
 int32 UDbObject::Execute(const FString& SQL)
 {
-	if (DbObjectIsValid())
+	if (DbObjectIsValid(this))
 	{
 		SQLITE_TRY
 		{
@@ -114,7 +145,7 @@ int32 UDbObject::Execute(const FString& SQL)
 
 bool UDbObject::Fetch(const FString& SQL, FSqliteColumn& Column)
 {
-	if (DbObjectIsValid())
+	if (DbObjectIsValid(this))
 	{
 		SQLITE_TRY
 		{
@@ -132,13 +163,25 @@ bool UDbObject::Fetch(const FString& SQL, FSqliteColumn& Column)
 	return false;
 }
 
-bool UDbObject::StartDbTransaction()
+bool UDbObject::StartDbTransaction(EDbTransactionFlags Flags)
 {
-	if (DbObjectIsValid() || !DbTransactIsValid())
+	if (DbObjectIsValid(this) && !DbTransactIsValid())
 	{
 		SQLITE_TRY
 		{
-			Transaction = MakeUnique<SQLite::Transaction>(*RawDb, SQLite::TransactionBehavior::IMMEDIATE);
+			SQLite::TransactionBehavior Beh = SQLite::TransactionBehavior::DEFERRED;
+
+			switch (Flags)
+			{
+			case EDbTransactionFlags::Immediate:
+				Beh = SQLite::TransactionBehavior::IMMEDIATE; break;
+			case EDbTransactionFlags::Deferred:
+				Beh = SQLite::TransactionBehavior::DEFERRED; break;
+			case EDbTransactionFlags::Exclusive:
+				Beh = SQLite::TransactionBehavior::EXCLUSIVE; break;
+			}
+			
+			Transaction = MakeUnique<SQLite::Transaction>(*RawDb, Beh);
 			Ctx.LogMsg(L"Initiated Db Transaction, db: \"{0}\"", {DbParams.DBName});
 
 			return true;
@@ -185,7 +228,7 @@ void UDbObject::RollbackDbTransaction()
 
 void UDbObject::MakeBackup()
 {
-	if (DbObjectIsValid())
+	if (DbObjectIsValid(this))
 	{
 		SQLITE_TRY
 		{
@@ -204,6 +247,26 @@ void UDbObject::MakeBackup()
 		}
 		SQLITE_END
 	}
+}
+
+bool UDbObject::IsBusy() const
+{
+	if (DbObjectIsValid(this))
+	{
+		return RawDb->getErrorCode() == SQLITE_BUSY;
+	}
+
+	return false;
+}
+
+bool UDbObject::IsLocked() const
+{
+	if (DbObjectIsValid(this))
+	{
+		return RawDb->getErrorCode() == SQLITE_LOCKED;
+	}
+
+	return false;
 }
 
 void UDbObject::BeginDestroy()

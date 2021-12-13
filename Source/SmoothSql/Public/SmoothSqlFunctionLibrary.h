@@ -124,7 +124,13 @@ public:
 	 * @return Handle to connection
 	 */
 	UFUNCTION(BlueprintCallable, Category = "SmoothSqlite|Connection")
-	static UDbObject* OpenDbConnection();
+	static UDbObject* OpenDbConnection(UPARAM(meta = (Bitmask, BitmaskEnum="EDbOpenFlags")) int32 OpenFlags = 2);
+
+	/**
+	 *
+	 */
+	UFUNCTION(BlueprintCallable, BlueprintPure, Category="SmoothSqlite|Connection", meta=(DisplayName="Is Valid (DbObject)"))
+	static bool IsValid_DbConnection(UDbObject* Object);
 
 	/**
 	 * @brief Open database and execute SQL

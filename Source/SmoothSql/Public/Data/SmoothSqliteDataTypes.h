@@ -4,11 +4,44 @@
 
 #include "CoreMinimal.h"
 #include "SmoothSql.h"
+#include "sqlite3.h"
 #include "SQLiteCpp/Column.h"
 #include "SQLiteCpp/Database.h"
 #include "SQLiteCpp/Transaction.h"
 #include "SmoothSqliteDataTypes.generated.h"
 
+
+UENUM(meta=(Bitflags))
+enum class EDbOpenFlags : uint8
+{
+	ReadOnly		= 0,
+	ReadWrite		= 1,
+	Create			= 2,
+	Memory			= 3,
+	URI				= 4,
+	NoMutex			= 5,
+	SharedCache		= 6,
+	PrivateCache	= 7,
+};
+ENUM_CLASS_FLAGS(EDbOpenFlags);
+
+#ifndef SQLITE_GET_FLAG
+#define SQLITE_GET_FLAG(Enum) (1 << static_cast<uint8>(Enum))
+#endif
+
+// UENUM(BlueprintType)
+// enum class EDbResposeCodes : uint8
+// {
+// 	
+// };
+
+UENUM(BlueprintType)
+enum class EDbTransactionFlags : uint8
+{
+	Immediate,
+	Deferred,
+	Exclusive
+};
 
 USTRUCT(BlueprintType)
 struct FSqliteDBConnectionParms

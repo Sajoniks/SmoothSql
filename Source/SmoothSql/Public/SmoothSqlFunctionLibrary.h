@@ -133,6 +133,13 @@ public:
 	static bool IsValid_DbConnection(UDbObject* Object);
 
 	/**
+	 *
+	 */
+	UFUNCTION(BlueprintCallable, BlueprintPure, Category="SmoothSqlite|Connection", meta=(DisplayName="Is Valid (DbStmt)"))
+	static bool IsValid_DbStmt(UDbStmt* Object);
+
+	
+	/**
 	 * @brief Open database and execute SQL
 	 *
 	 * Opens connection in-place, executes code and then closes connection

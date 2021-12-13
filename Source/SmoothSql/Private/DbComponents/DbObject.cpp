@@ -89,7 +89,8 @@ int32 UDbObject::GetChangesNum() const
 
 void UDbObject::Release()
 {
-	RawDb.Release();
+	RawDb.Reset();
+	Transaction.Reset();
 	bValid = false;
 }
 
@@ -215,7 +216,7 @@ bool UDbObject::CommitDbTransaction()
 		}
 		SQLITE_END
 		
-		Transaction.Release();
+		Transaction.Reset();
 	}
 
 	return bCommit;
@@ -223,7 +224,7 @@ bool UDbObject::CommitDbTransaction()
 
 void UDbObject::RollbackDbTransaction()
 {
-	Transaction.Release();
+	Transaction.Reset();
 }
 
 void UDbObject::MakeBackup()

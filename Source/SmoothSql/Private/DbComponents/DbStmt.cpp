@@ -31,7 +31,7 @@ void UDbStmt::Init(SQLite::Database* Db, const FString& SQL)
 
 void UDbStmt::Release()
 {
-	RawStmt.Release();
+	RawStmt.Reset();
 	bValid = false;
 }
 

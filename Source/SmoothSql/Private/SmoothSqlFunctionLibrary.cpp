@@ -294,6 +294,11 @@ bool USmoothSqlFunctionLibrary::IsValid_DbConnection(UDbObject* Object)
 	return UDbObject::DbObjectIsValid(Object);
 }
 
+bool USmoothSqlFunctionLibrary::IsValid_DbStmt(UDbStmt* Object)
+{
+	return UDbStmt::DbStmtIsValid(Object);
+}
+
 int32 USmoothSqlFunctionLibrary::ExecuteInline(const FString& SQL)
 {
 	auto Obj = OpenDbConnection();

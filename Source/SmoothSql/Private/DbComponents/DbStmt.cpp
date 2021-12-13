@@ -37,7 +37,7 @@ void UDbStmt::Release()
 
 bool UDbStmt::IsDone() const
 {
-	if (DbStmtIsValid())
+	if (DbStmtIsValid(this))
 	{
 		return RawStmt->isDone();
 	}
@@ -47,7 +47,7 @@ bool UDbStmt::IsDone() const
 
 bool UDbStmt::Fetch()
 {
-	if (DbStmtIsValid())
+	if (DbStmtIsValid(this))
 	{
 		SQLITE_TRY
 		{
@@ -65,7 +65,7 @@ bool UDbStmt::Fetch()
 
 int32 UDbStmt::Execute()
 {
-	if (DbStmtIsValid())
+	if (DbStmtIsValid(this))
 	{
 		SQLITE_TRY
 		{
@@ -83,7 +83,7 @@ int32 UDbStmt::Execute()
 
 void UDbStmt::Reset()
 {
-	if (DbStmtIsValid())
+	if (DbStmtIsValid(this))
 	{
 		SQLITE_TRY
 		{
@@ -99,7 +99,7 @@ void UDbStmt::Reset()
 
 void UDbStmt::ClearBindings()
 {
-	if (DbStmtIsValid())
+	if (DbStmtIsValid(this))
 	{
 		SQLITE_TRY
 		{
@@ -121,7 +121,7 @@ void UDbStmt::Close()
 
 SQLite::Statement* UDbStmt::Raw() const
 {
-	if (DbStmtIsValid())
+	if (DbStmtIsValid(this))
 	{
 		return RawStmt.Get();
 	}
@@ -131,7 +131,7 @@ SQLite::Statement* UDbStmt::Raw() const
 
 TOptional<SQLite::Column> UDbStmt::GetColumn(int32 Idx)
 {
-	if (DbStmtIsValid())
+	if (DbStmtIsValid(this))
 	{
 		SQLITE_TRY
 		{
@@ -150,7 +150,7 @@ TOptional<SQLite::Column> UDbStmt::GetColumn(int32 Idx)
 
 TOptional<SQLite::Column> UDbStmt::GetColumn(const FString& Col)
 {
-	if (DbStmtIsValid())
+	if (DbStmtIsValid(this))
 	{
 		SQLITE_TRY
 		{

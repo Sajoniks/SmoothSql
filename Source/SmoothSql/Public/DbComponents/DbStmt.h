@@ -44,7 +44,7 @@ public:
 	UFUNCTION(BlueprintCallable, Category="SmoothSql|Statement|Get", meta=(DisplayName="Statement Is Valid"))
 	bool DbStmtIsValid() const { return bValid; }
 
-	static bool DbStmtIsValid(UDbStmt* Stmt)
+	static bool DbStmtIsValid(const UDbStmt* Stmt)
 	{
 		return IsValid(Stmt) && Stmt->DbStmtIsValid();
 	} 

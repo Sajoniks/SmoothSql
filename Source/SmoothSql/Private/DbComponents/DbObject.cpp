@@ -144,25 +144,36 @@ int32 UDbObject::Execute(const FString& SQL)
 	return -1;
 }
 
-bool UDbObject::Fetch(const FString& SQL, FSqliteColumn& Column)
+bool UDbObject::Fetch(const FString& SQL, UDbStmt*& Stmt)
 {
-	if (DbObjectIsValid(this))
+	Stmt = Prepare(SQL);
+	if (UDbStmt::DbStmtIsValid(Stmt))
 	{
-		SQLITE_TRY
-		{
-			const auto cSQL = std::string(TCHAR_TO_UTF8(*SQL));
-			Column = RawDb->execAndGet(cSQL);
-			return true;
-		}
-		SQLITE_CATCH
-		{
-			Ctx.Log(L"Db Fetch");
-		}
-		SQLITE_END
+		return Stmt->Fetch();
 	}
 
 	return false;
 }
+
+// bool UDbObject::Fetch(const FString& SQL, FSqliteColumn& Column)
+// {
+// 	if (DbObjectIsValid(this))
+// 	{
+// 		SQLITE_TRY
+// 		{
+// 			const auto cSQL = std::string(TCHAR_TO_UTF8(*SQL));
+// 			Column = RawDb->execAndGet(cSQL);
+// 			return true;
+// 		}
+// 		SQLITE_CATCH
+// 		{
+// 			Ctx.Log(L"Db Fetch");
+// 		}
+// 		SQLITE_END
+// 	}
+//
+// 	return false;
+// }
 
 bool UDbObject::StartDbTransaction(EDbTransactionFlags Flags)
 {

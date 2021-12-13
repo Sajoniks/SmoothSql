@@ -53,17 +53,42 @@ namespace details
 	{
 		return FName(Col.getText());
 	}
+
+	
+	template <class T>
+	decltype(auto) ColumnCast(FSqliteColumn& Row)
+	{
+		return *static_cast<const T*>(Row.GetData());
+	}
+
+	template<>
+	decltype(auto) ColumnCast<FString>(FSqliteColumn& Row)
+	{
+		return FString(UTF8_TO_TCHAR(ColumnCast<const char>(Row)));
+	}
+	
+	template<>
+	decltype(auto) ColumnCast<FName>(FSqliteColumn& Row)
+	{
+		return FName(TCHAR_TO_ANSI(UTF8_TO_TCHAR(ColumnCast<const char>(Row))));
+	}
+
+	template<>
+	decltype(auto) ColumnCast<FText>(FSqliteColumn& Row)
+	{
+		return FText::FromString( ColumnCast<FString>(Row) );
+	}	
 	///
 }
 /// Get value from FSqliteColumn
 template<class T>
 decltype(auto) GetFromStructColumn(FSqliteColumn& Row)
 {
-	if (Row.ColumnPtr.IsValid())
+	if (Row.IsValid())
 	{
 		try
 		{
-			auto Value = details::GetFromColumn<T>(*Row.ColumnPtr.Get());
+			auto Value = details::ColumnCast<T>(Row);
 			return Value;
 		}
 		catch (SQLite::Exception& e)
@@ -75,11 +100,13 @@ decltype(auto) GetFromStructColumn(FSqliteColumn& Row)
 	return T{};
 }
 
+
+
 /// Get column value from Sqlite Statement
 template<class T>
 static T GetFromStatement(UDbStmt* Statement, const FString& Column)
 {
-	if (Statement->DbStmtIsValid())
+	if (UDbStmt::DbStmtIsValid(Statement))
 	{
 		auto Col = Statement->GetColumn(Column);
 		if (Col.IsSet())
@@ -95,7 +122,7 @@ static T GetFromStatement(UDbStmt* Statement, const FString& Column)
 template<class T>
 static T GetFromStatement(UDbStmt* Statement, int32 Column)
 {
-	if (Statement->DbStmtIsValid())
+	if (UDbStmt::DbStmtIsValid(Statement))
 	{
 		auto Col = Statement->GetColumn(Column);
 		if (Col.IsSet())
@@ -253,7 +280,7 @@ DB_COL_GETTER_IMPL(FName, Name)
 
 bool USmoothSqlFunctionLibrary::IsValid_Column(FSqliteColumn& Column)
 {
-	return Column.ColumnPtr != nullptr;
+	return Column.IsValid();
 }
 #undef DB_COL_GETTER_IMPL
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -270,7 +297,7 @@ UDbStmt* USmoothSqlFunctionLibrary::K2_StepStatement(UDbStmt* Target, bool& Succ
 		return nullptr;
 	}
 	
-	if (Target->DbStmtIsValid())
+	if (UDbStmt::DbStmtIsValid(Target))
 	{
 		Success = Target->Fetch();
 	}

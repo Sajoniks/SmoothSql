@@ -80,7 +80,7 @@ public:
 	 *
 	 */
 	UFUNCTION(BlueprintCallable, Category="SmoothSql|Database|Action")
-	bool Fetch(const FString& SQL, FSqliteColumn& Column);
+	bool Fetch(const FString& SQL, UDbStmt*& Stmt);
 
 	/**
 	 *

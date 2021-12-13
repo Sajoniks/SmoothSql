@@ -67,45 +67,46 @@ struct FSqliteColumn
 {
 	GENERATED_BODY()
 
-	FSqliteColumn()
-		: ColumnPtr(nullptr)
-	{
-		
-	}
+private:
 
-	FSqliteColumn(const SQLite::Column& Column)
-		: ColumnPtr(new SQLite::Column(Column))
-	{
-		
-	}
-
-	FSqliteColumn(const FSqliteColumn& Column)
-		: ColumnPtr(new SQLite::Column( *Column.ColumnPtr ))
-	{
-		
-	}
-
-	FSqliteColumn& operator=(const FSqliteColumn& Column)
-	{
-		if (&Column != this && Column.ColumnPtr.IsValid())
-		{
-			ColumnPtr.Reset(new SQLite::Column(*Column.ColumnPtr));
-		}
-
-		return *this;
-	}
+	bool bValid;
+	void* Data;
 	
-	TUniquePtr<SQLite::Column> ColumnPtr;
+public:
+
+	FSqliteColumn() = default;
+
+	FSqliteColumn(const SQLite::Column& Column):
+		Data(nullptr)
+	{
+		if (Column.isNull())
+		{
+			bValid = false;
+		}
+		else
+		{
+			FMemory::Memcpy(Data, Column.getBlob(), Column.size() );
+		}
+	}
+
+	const void* GetData() const {return Data;}
+
+	bool IsValid() const {return bValid;}
+
+	~FSqliteColumn()
+	{
+		FMemory::Free(Data);
+	}
 };
 
-template<>
-struct TStructOpsTypeTraits<FSqliteColumn> : TStructOpsTypeTraitsBase2<FSqliteColumn>
-{
-	enum
-	{
-		WithCopy = true
-	};
-};
+// template<>
+// struct TStructOpsTypeTraits<FSqliteColumn> : TStructOpsTypeTraitsBase2<FSqliteColumn>
+// {
+// 	enum
+// 	{
+// 		WithCopy = true
+// 	};
+// };
 
 
 // USTRUCT(BlueprintType)

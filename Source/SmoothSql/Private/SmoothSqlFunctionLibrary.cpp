@@ -164,6 +164,11 @@ namespace details
 	{
 		UE_LOG(LogSmoothSqlite, Error, L"Failed to bind value '%d' to param '%s'", Value, *Param);
 	}
+	
+	void Log(const FString& Msg)
+	{
+		FFrame::KismetExecutionMessage(*Msg, ELogVerbosity::Error);
+	}
 
 
 	template<>
@@ -198,28 +203,27 @@ void Bind(const FString& Param, const T& Value, UDbStmt* Statement)
 	}
 }
 
+#define K2_BIND_IMPL(Type, Name)\
+void USmoothSqlFunctionLibrary::K2_BindQueryParam_##Name##(UDbStmt* Target, const FString& Param, Type Value) \
+{ \
+	if (UDbStmt::DbStmtIsValid(Target)) \
+		Bind<Type>(Param, Value, Target); \
+	else \
+		details::Log("Invalid Statement"); \
+} \
 
+K2_BIND_IMPL(int32, Int)
+K2_BIND_IMPL(int64, Int64)
+K2_BIND_IMPL(float, Float)
 
-
-void USmoothSqlFunctionLibrary::K2_BindQueryParam_Int(UDbStmt* Target, const FString& Param, int32 Value)
-{
-	Bind<int32>(Param, Value, Target);
-}
-
-void USmoothSqlFunctionLibrary::K2_BindQueryParam_Int64(UDbStmt* Target, const FString& Param, int64 Value)
-{
-	Bind<int64>(Param, Value, Target);
-}
-
-void USmoothSqlFunctionLibrary::K2_BindQueryParam_Float(UDbStmt* Target, const FString& Param, float Value)
-{
-	Bind<float>(Param, Value, Target);
-}
 
 void USmoothSqlFunctionLibrary::K2_BindQueryParam_String(UDbStmt* Target, const FString& Param,
                                                          const FString& Value)
 {
-	Bind<FString>(Param, Value, Target);
+	if (UDbStmt::DbStmtIsValid(Target))
+		Bind<FString>(Param, Value, Target);
+	else
+		details::Log("Invalid Statement");
 }
 
 void USmoothSqlFunctionLibrary::K2_BindQueryParam_Text(UDbStmt* Target, const FString& Param,
@@ -233,6 +237,8 @@ void USmoothSqlFunctionLibrary::K2_BindQueryParam_Name(UDbStmt* Target, const FS
 {
 	K2_BindQueryParam_String(Target, Param, Value.ToString());
 }
+
+#undef K2_BIND_IMPL
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 

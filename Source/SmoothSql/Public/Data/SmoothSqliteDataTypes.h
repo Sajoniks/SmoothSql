@@ -3,11 +3,7 @@
 #pragma once
 
 #include "CoreMinimal.h"
-#include "SmoothSql.h"
-#include "sqlite3.h"
 #include "SQLiteCpp/Column.h"
-#include "SQLiteCpp/Database.h"
-#include "SQLiteCpp/Transaction.h"
 #include "SmoothSqliteDataTypes.generated.h"
 
 
@@ -74,7 +70,9 @@ private:
 	
 public:
 
-	FSqliteColumn() = default;
+	FSqliteColumn():
+		Data(nullptr)
+	{}
 
 	FSqliteColumn(const SQLite::Column& Column):
 		Data(nullptr)
@@ -85,7 +83,8 @@ public:
 		}
 		else
 		{
-			FMemory::Memcpy(Data, Column.getBlob(), Column.size() );
+			if (Data == nullptr)
+				FMemory::Memcpy(Data, Column.getBlob(), Column.size() );
 		}
 	}
 
@@ -95,7 +94,8 @@ public:
 
 	~FSqliteColumn()
 	{
-		FMemory::Free(Data);
+		if (Data != nullptr)
+			FMemory::Free(Data);
 	}
 };
 

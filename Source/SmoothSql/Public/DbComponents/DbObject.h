@@ -5,6 +5,7 @@
 #include "CoreMinimal.h"
 #include "Data/SmoothSqliteDataTypes.h"
 #include "SQLiteCpp/Backup.h"
+#include "SQLiteCpp/Transaction.h"
 #include "UObject/NoExportTypes.h"
 #include "DbObject.generated.h"
 

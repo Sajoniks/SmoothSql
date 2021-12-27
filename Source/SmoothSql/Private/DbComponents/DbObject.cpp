@@ -5,6 +5,7 @@
 #include "SmoothSql.h"
 
 #include "DbDefaultSettings.h"
+#include "sqlite3.h"
 #include "DbComponents/DbStmt.h"
 
 void UDbObject::Init(int32 OpenFlags)

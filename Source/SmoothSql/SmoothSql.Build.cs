@@ -29,7 +29,7 @@ public class SmoothSql : ModuleRules
 				"Core",
 				"CoreUObject",
 				"SqliteCpp",
-				"Projects", "Engine"
+				"Projects", "Engine", "DeveloperSettings"
 				// ... add other public dependencies that you statically link with here ...
 			}
 			);

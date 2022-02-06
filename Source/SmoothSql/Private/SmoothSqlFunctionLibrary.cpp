@@ -4,6 +4,8 @@
 #include "SmoothSqlFunctionLibrary.h"
 
 #include "SmoothSql.h"
+#include "DbComponents/DbObject.h"
+#include "DbComponents/DbStmt.h"
 #include "SQLiteCpp/Exception.h"
 
 
@@ -45,17 +47,48 @@ namespace details
 	{
 		return (float) Col.getDouble();
 	}
+
+	template<>
+	decltype(auto) GetFromColumn<FName>(const SQLite::Column& Col)
+	{
+		return FName(Col.getText());
+	}
+
+	
+	template <class T>
+	decltype(auto) ColumnCast(FSqliteColumn& Row)
+	{
+		return *static_cast<const T*>(Row.GetData());
+	}
+
+	template<>
+	decltype(auto) ColumnCast<FString>(FSqliteColumn& Row)
+	{
+		return FString(UTF8_TO_TCHAR(ColumnCast<const char>(Row)));
+	}
+	
+	template<>
+	decltype(auto) ColumnCast<FName>(FSqliteColumn& Row)
+	{
+		return FName(TCHAR_TO_ANSI(UTF8_TO_TCHAR(ColumnCast<const char>(Row))));
+	}
+
+	template<>
+	decltype(auto) ColumnCast<FText>(FSqliteColumn& Row)
+	{
+		return FText::FromString( ColumnCast<FString>(Row) );
+	}	
 	///
 }
 /// Get value from FSqliteColumn
 template<class T>
 decltype(auto) GetFromStructColumn(FSqliteColumn& Row)
 {
-	if (Row.ColumnPtr.IsValid())
+	if (Row.IsValid())
 	{
 		try
 		{
-			auto Value = details::GetFromColumn<T>(*Row.ColumnPtr.Get());
+			auto Value = details::ColumnCast<T>(Row);
 			return Value;
 		}
 		catch (SQLite::Exception& e)
@@ -67,13 +100,31 @@ decltype(auto) GetFromStructColumn(FSqliteColumn& Row)
 	return T{};
 }
 
+
+
 /// Get column value from Sqlite Statement
 template<class T>
-static T GetFromStatement(FDbStatement& Statement, const FString& Column)
+static T GetFromStatement(UDbStmt* Statement, const FString& Column)
 {
-	if (Statement.IsValid())
+	if (UDbStmt::DbStmtIsValid(Statement))
 	{
-		auto Col = Statement.Get(Column);
+		auto Col = Statement->GetColumn(Column);
+		if (Col.IsSet())
+		{
+			return details::GetFromColumn<T>(Col.GetValue());
+		}			
+	}
+	
+	return T{};
+	
+}
+
+template<class T>
+static T GetFromStatement(UDbStmt* Statement, int32 Column)
+{
+	if (UDbStmt::DbStmtIsValid(Statement))
+	{
+		auto Col = Statement->GetColumn(Column);
 		if (Col.IsSet())
 		{
 			return details::GetFromColumn<T>(Col.GetValue());
@@ -113,6 +164,11 @@ namespace details
 	{
 		UE_LOG(LogSmoothSqlite, Error, L"Failed to bind value '%d' to param '%s'", Value, *Param);
 	}
+	
+	void Log(const FString& Msg)
+	{
+		FFrame::KismetExecutionMessage(*Msg, ELogVerbosity::Error);
+	}
 
 
 	template<>
@@ -130,15 +186,15 @@ namespace details
 
 /// Main helper method binding query param
 template <class T>
-void Bind(const FString& Param, const T& Value, FDbStatement& Statement)
+void Bind(const FString& Param, const T& Value, UDbStmt* Statement)
 {
 	try
 	{
-		if (!Statement.IsValid()) return;
+		if (!Statement->DbStmtIsValid()) return;
 
 		const std::string ParamName = std::string(TCHAR_TO_UTF8(*Param));
 			
-		details::BindQueryParam(":" + ParamName, Value, *Statement.Raw());
+		details::BindQueryParam(":" + ParamName, Value, *Statement->Raw());
 	}
 	catch (SQLite::Exception& e)
 	{
@@ -147,38 +203,42 @@ void Bind(const FString& Param, const T& Value, FDbStatement& Statement)
 	}
 }
 
-void USmoothSqlFunctionLibrary::K2_BindQueryParam_Int(FDbStatement& Target, const FString& Param, int32 Value)
-{
-	Bind<int32>(Param, Value, Target);
-}
+#define K2_BIND_IMPL(Type, Name)\
+void USmoothSqlFunctionLibrary::K2_BindQueryParam_##Name##(UDbStmt* Target, const FString& Param, Type Value) \
+{ \
+	if (UDbStmt::DbStmtIsValid(Target)) \
+		Bind<Type>(Param, Value, Target); \
+	else \
+		details::Log("Invalid Statement"); \
+} \
 
-void USmoothSqlFunctionLibrary::K2_BindQueryParam_Int64(FDbStatement& Target, const FString& Param, int64 Value)
-{
-	Bind<int64>(Param, Value, Target);
-}
+K2_BIND_IMPL(int32, Int)
+K2_BIND_IMPL(int64, Int64)
+K2_BIND_IMPL(float, Float)
 
-void USmoothSqlFunctionLibrary::K2_BindQueryParam_Float(FDbStatement& Target, const FString& Param, float Value)
-{
-	Bind<float>(Param, Value, Target);
-}
 
-void USmoothSqlFunctionLibrary::K2_BindQueryParam_String(FDbStatement& Target, const FString& Param,
+void USmoothSqlFunctionLibrary::K2_BindQueryParam_String(UDbStmt* Target, const FString& Param,
                                                          const FString& Value)
 {
-	Bind<FString>(Param, Value, Target);
+	if (UDbStmt::DbStmtIsValid(Target))
+		Bind<FString>(Param, Value, Target);
+	else
+		details::Log("Invalid Statement");
 }
 
-void USmoothSqlFunctionLibrary::K2_BindQueryParam_Text(FDbStatement&  Target, const FString& Param,
+void USmoothSqlFunctionLibrary::K2_BindQueryParam_Text(UDbStmt* Target, const FString& Param,
 	const FText& Value)
 {
 	K2_BindQueryParam_String(Target, Param, Value.ToString());
 }
 
-void USmoothSqlFunctionLibrary::K2_BindQueryParam_Name(FDbStatement& Target, const FString& Param,
+void USmoothSqlFunctionLibrary::K2_BindQueryParam_Name(UDbStmt* Target, const FString& Param,
 	const FName& Value)
 {
 	K2_BindQueryParam_String(Target, Param, Value.ToString());
 }
+
+#undef K2_BIND_IMPL
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
@@ -186,25 +246,25 @@ void USmoothSqlFunctionLibrary::K2_BindQueryParam_Name(FDbStatement& Target, con
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-int32 USmoothSqlFunctionLibrary::GetInt(FDbStatement& Target, const FString& Column)
-{
-	return GetFromStatement<int32>(Target, Column);
-}
+#define DB_STMT_GETTER_IMPL(Type, Name)\
+	Type USmoothSqlFunctionLibrary::Get##Name##_Stmt_Idx(UDbStmt* Target, int32 ColumnIdx)\
+	{\
+		return GetFromStatement<Type>(Target, ColumnIdx);\
+	}\
+	\
+	Type USmoothSqlFunctionLibrary::Get##Name##_Stmt_Str(UDbStmt* Target, const FString& ColumnName)\
+	{\
+		return GetFromStatement<Type>(Target, ColumnName);\
+	}
 
-int64 USmoothSqlFunctionLibrary::GetInt64(FDbStatement& Target, const FString& Column)
-{
-	return GetFromStatement<int64>(Target, Column);
-}
 
-float USmoothSqlFunctionLibrary::GetFloat(FDbStatement& Target, const FString& Column)
-{
-	return GetFromStatement<float>(Target, Column);
-}
+	DB_STMT_GETTER_IMPL(int32, Int)
+	DB_STMT_GETTER_IMPL(int64, Int64)
+	DB_STMT_GETTER_IMPL(float, Float)
+	DB_STMT_GETTER_IMPL(FString, String)
+	DB_STMT_GETTER_IMPL(FName, Name)
 
-FString USmoothSqlFunctionLibrary::GetString(FDbStatement& Target, const FString& Column)
-{
-	return GetFromStatement<FString>(Target, Column);
-}
+#undef DB_STMT_GETTER_IMPL
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
@@ -212,128 +272,152 @@ FString USmoothSqlFunctionLibrary::GetString(FDbStatement& Target, const FString
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-int32 USmoothSqlFunctionLibrary::GetInt_Column(FSqliteColumn& Column)
-{
-	return GetFromStructColumn<int32>(Column);
+#define DB_COL_GETTER_IMPL(Type, Name)\
+Type USmoothSqlFunctionLibrary::Get##Name##_Column(FSqliteColumn& Column)\
+{\
+	return GetFromStructColumn<Type>(Column);\
 }
 
-int64 USmoothSqlFunctionLibrary::GetInt64_Column(FSqliteColumn& Column)
-{
-	return GetFromStructColumn<int64>(Column);
-}
-
-float USmoothSqlFunctionLibrary::GetFloat_Column(FSqliteColumn& Column)
-{
-	return GetFromStructColumn<float>(Column);
-}
-
-FString USmoothSqlFunctionLibrary::GetString_Column(FSqliteColumn& Column)
-{
-	return GetFromStructColumn<FString>(Column);
-}
+DB_COL_GETTER_IMPL(int32, Int)
+DB_COL_GETTER_IMPL(int64, Int64)
+DB_COL_GETTER_IMPL(float, Float)
+DB_COL_GETTER_IMPL(FString, String)
+DB_COL_GETTER_IMPL(FName, Name)
 
 bool USmoothSqlFunctionLibrary::IsValid_Column(FSqliteColumn& Column)
 {
-	return Column.ColumnPtr != nullptr;
+	return Column.IsValid();
 }
+#undef DB_COL_GETTER_IMPL
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 
 
-FDbStatement& USmoothSqlFunctionLibrary::K2_StepStatement(FDbStatement& Target, bool& Success)
+UDbStmt* USmoothSqlFunctionLibrary::K2_StepStatement(UDbStmt* Target, bool& Success)
 {
-	if (Target.IsValid())
+	if (!Target)
 	{
-		Success = Target.Fetch();
+		UE_LOG(LogSmoothSqlite, Error, L"Null statement while K2_StepStatement!");
+		Success = false;
+		return nullptr;
+	}
+	
+	if (UDbStmt::DbStmtIsValid(Target))
+	{
+		Success = Target->Fetch();
 	}
 
 	return Target;
 }
 
-FDbConnectionHandle USmoothSqlFunctionLibrary::OpenDbConnection(const FSqliteDBConnectionParms& Parms)
+UDbObject* USmoothSqlFunctionLibrary::OpenDbConnection(int32 OpenFlags)
 {
-	return FDbConnectionHandle{Parms};
+	if (auto Obj = NewObject<UDbObject>())
+	{
+		Obj->Init(OpenFlags);
+		return Obj;
+	}
+
+	return nullptr;
 }
 
-FDbStatement USmoothSqlFunctionLibrary::Query(FDbConnectionHandle& Handle, const FString& Query)
+bool USmoothSqlFunctionLibrary::IsValid_DbConnection(UDbObject* Object)
 {
-	return Handle.Query(Query);
+	return UDbObject::DbObjectIsValid(Object);
 }
 
-bool USmoothSqlFunctionLibrary::IsValid_DbHandle(const FDbConnectionHandle& Handle)
+bool USmoothSqlFunctionLibrary::IsValid_DbStmt(UDbStmt* Object)
 {
-	return Handle.IsValid();
+	return UDbStmt::DbStmtIsValid(Object);
 }
 
-bool USmoothSqlFunctionLibrary::IsValid_DbTransaction(const FDbConnectionHandle& Handle)
+int32 USmoothSqlFunctionLibrary::ExecuteInline(const FString& SQL)
 {
-	return Handle.IsValidTransaction();
+	auto Obj = OpenDbConnection();
+	int32 Res = Obj->Execute(SQL);
+	Obj->Close();
+	return Res;
 }
 
-bool USmoothSqlFunctionLibrary::BeginTransaction(FDbConnectionHandle& Handle)
-{
-	return Handle.BeginTransaction();
-}
-
-bool USmoothSqlFunctionLibrary::CommitTransaction(FDbConnectionHandle& Handle)
-{
-	return Handle.CommitTransaction();
-}
-
-bool USmoothSqlFunctionLibrary::RollbackTransaction(FDbConnectionHandle& Handle)
-{
-	return Handle.RollbackTransaction();
-}
-
-bool USmoothSqlFunctionLibrary::Execute(FDbConnectionHandle& Handle, const FString& Query)
-{
-	return Handle.Execute(Query);
-}
-
-FSqliteColumn USmoothSqlFunctionLibrary::Fetch(FDbConnectionHandle& Handle, const FString& Query)
-{
-	return Handle.Fetch(Query);
-}
-
-bool USmoothSqlFunctionLibrary::IsValid_DbStatement(const FDbStatement& Handle)
-{
-	return Handle.IsValid();
-}
-
-bool USmoothSqlFunctionLibrary::IsDone(const FDbStatement& Handle)
-{
-	return Handle.IsDone();
-}
-
-int32 USmoothSqlFunctionLibrary::Execute_Statement(FDbStatement& Statement)
-{
-	return Statement.Execute();
-}
-
-bool USmoothSqlFunctionLibrary::Fetch_Statement(FDbStatement& Statement)
-{
-	return Statement.Fetch();
-}
-
-void USmoothSqlFunctionLibrary::ClearBinds(FDbStatement& Statement)
-{
-	Statement.ClearBinds();
-}
-
-void USmoothSqlFunctionLibrary::Reset(FDbStatement& Statement)
-{
-	Statement.Reset();
-}
-
-void USmoothSqlFunctionLibrary::CloseStatement(FDbStatement& Statement)
-{
-	Statement.Invalidate();
-}
-
-void USmoothSqlFunctionLibrary::CloseConnection(FDbConnectionHandle& Handle)
-{
-	Handle.Invalidate();
-}
-
-
+// FDbStatement USmoothSqlFunctionLibrary::Query(FDbConnectionHandle& Handle, const FString& Query)
+// {
+// 	return Handle.Query(Query);
+// }
+//
+// bool USmoothSqlFunctionLibrary::IsValid_DbHandle(const FDbConnectionHandle& Handle)
+// {
+// 	return Handle.IsValid();
+// }
+//
+// bool USmoothSqlFunctionLibrary::IsValid_DbTransaction(const FDbConnectionHandle& Handle)
+// {
+// 	return Handle.IsValidTransaction();
+// }
+//
+// bool USmoothSqlFunctionLibrary::BeginTransaction(FDbConnectionHandle& Handle)
+// {
+// 	return Handle.BeginTransaction();
+// }
+//
+// bool USmoothSqlFunctionLibrary::CommitTransaction(FDbConnectionHandle& Handle)
+// {
+// 	return Handle.CommitTransaction();
+// }
+//
+// bool USmoothSqlFunctionLibrary::RollbackTransaction(FDbConnectionHandle& Handle)
+// {
+// 	return Handle.RollbackTransaction();
+// }
+//
+// bool USmoothSqlFunctionLibrary::Execute(FDbConnectionHandle& Handle, const FString& Query)
+// {
+// 	return Handle.Execute(Query);
+// }
+//
+// FSqliteColumn USmoothSqlFunctionLibrary::Fetch(FDbConnectionHandle& Handle, const FString& Query)
+// {
+// 	return Handle.Fetch(Query);
+// }
+//
+// bool USmoothSqlFunctionLibrary::IsValid_DbStatement(const FDbStatement& Handle)
+// {
+// 	return Handle.IsValid();
+// }
+//
+// bool USmoothSqlFunctionLibrary::IsDone(const FDbStatement& Handle)
+// {
+// 	return Handle.IsDone();
+// }
+//
+// int32 USmoothSqlFunctionLibrary::Execute_Statement(FDbStatement& Statement)
+// {
+// 	return Statement.Execute();
+// }
+//
+// bool USmoothSqlFunctionLibrary::Fetch_Statement(FDbStatement& Statement)
+// {
+// 	return Statement.Fetch();
+// }
+//
+// void USmoothSqlFunctionLibrary::ClearBinds(FDbStatement& Statement)
+// {
+// 	Statement.ClearBinds();
+// }
+//
+// void USmoothSqlFunctionLibrary::Reset(FDbStatement& Statement)
+// {
+// 	Statement.Reset();
+// }
+//
+// void USmoothSqlFunctionLibrary::CloseStatement(FDbStatement& Statement)
+// {
+// 	Statement.Invalidate();
+// }
+//
+// void USmoothSqlFunctionLibrary::CloseConnection(FDbConnectionHandle& Handle)
+// {
+// 	Handle.Invalidate();
+// }
+//
+//

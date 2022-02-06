@@ -3,12 +3,41 @@
 #pragma once
 
 #include "CoreMinimal.h"
-#include "SmoothSql.h"
 #include "SQLiteCpp/Column.h"
-#include "SQLiteCpp/Database.h"
-#include "SQLiteCpp/Transaction.h"
 #include "SmoothSqliteDataTypes.generated.h"
 
+
+UENUM(meta=(Bitflags))
+enum class EDbOpenFlags : uint8
+{
+	ReadOnly		= 0,
+	ReadWrite		= 1,
+	Create			= 2,
+	Memory			= 3,
+	URI				= 4,
+	NoMutex			= 5,
+	SharedCache		= 6,
+	PrivateCache	= 7,
+};
+ENUM_CLASS_FLAGS(EDbOpenFlags);
+
+#ifndef SQLITE_GET_FLAG
+#define SQLITE_GET_FLAG(Enum) (1 << static_cast<uint8>(Enum))
+#endif
+
+// UENUM(BlueprintType)
+// enum class EDbResposeCodes : uint8
+// {
+// 	
+// };
+
+UENUM(BlueprintType)
+enum class EDbTransactionFlags : uint8
+{
+	Immediate,
+	Deferred,
+	Exclusive
+};
 
 USTRUCT(BlueprintType)
 struct FSqliteDBConnectionParms
@@ -34,136 +63,141 @@ struct FSqliteColumn
 {
 	GENERATED_BODY()
 
-	FSqliteColumn()
-		: ColumnPtr(nullptr)
-	{
-		
-	}
+private:
 
-	FSqliteColumn(const SQLite::Column& Column)
-		: ColumnPtr(new SQLite::Column(Column))
-	{
-		
-	}
-
-	FSqliteColumn(const FSqliteColumn& Column)
-		: ColumnPtr(new SQLite::Column( *Column.ColumnPtr ))
-	{
-		
-	}
-
-	FSqliteColumn& operator=(const FSqliteColumn& Column)
-	{
-		if (&Column != this && Column.ColumnPtr.IsValid())
-		{
-			ColumnPtr.Reset(new SQLite::Column(*Column.ColumnPtr));
-		}
-
-		return *this;
-	}
+	bool bValid;
+	void* Data;
 	
-	TUniquePtr<SQLite::Column> ColumnPtr;
-};
+public:
 
-template<>
-struct TStructOpsTypeTraits<FSqliteColumn> : TStructOpsTypeTraitsBase2<FSqliteColumn>
-{
-	enum
-	{
-		WithCopy = true
-	};
-};
-
-
-USTRUCT(BlueprintType)
-struct FDbConnectionHandle
-{
-	GENERATED_BODY()
-
-	friend struct FDbStatement;
-	
-	FDbConnectionHandle()
-		: ConnectionPtr(nullptr)
+	FSqliteColumn():
+		Data(nullptr)
 	{}
-	
-	FDbConnectionHandle(const FSqliteDBConnectionParms& Params);
 
-	
-	bool BeginTransaction();
-	bool CommitTransaction();
-	bool RollbackTransaction();
-
-	bool Execute(const FString& Query);
-	FSqliteColumn Fetch(const FString& Query);
-
-	struct FDbStatement Query(const FString& Query);
-
-	bool IsValid() const {return ConnectionPtr.IsValid();}
-	bool IsValidTransaction() const {return TransactionPtr.IsValid();}
-
-	void Invalidate()
+	FSqliteColumn(const SQLite::Column& Column):
+		Data(nullptr)
 	{
-		ConnectionPtr.Reset();
-		TransactionPtr.Reset();
-	}
-
-	UPROPERTY(BlueprintReadOnly, Category="DbHandle")
-	FSqliteDBConnectionParms ConnectionParms;
-	
-private:
-	TSharedPtr<SQLite::Database> ConnectionPtr;
-	TSharedPtr<SQLite::Transaction> TransactionPtr;
-};
-
-
-USTRUCT(BlueprintType)
-struct FDbStatement
-{
-	GENERATED_BODY()
-
-	FDbStatement()
-		: StatementPtr(nullptr) {}
-
-	FDbStatement(const FDbConnectionHandle& Handle, const FString& Query);
-	
-	int32 Execute();
-	bool Fetch();
-
-	void ClearBinds();
-	void Reset();
-
-	template<class T>
-	void Bind(const FString& ParamName, const T& Value);
-	
-	TOptional<SQLite::Column> Get(const FString& Column);
-	TOptional<SQLite::Column> Get(int32 Index);
-
-	SQLite::Statement* Raw() const;
-
-	bool IsValid() const {return StatementPtr.IsValid(); }
-	bool IsDone() const {return IsValid() ? StatementPtr->isDone() : true;}
-
-	void Invalidate() {StatementPtr.Reset();}
-
-private:
-	TSharedPtr<SQLite::Statement> StatementPtr;
-};
-
-
-template <class T>
-void FDbStatement::Bind(const FString& ParamName, const T& Value)
-{
-	if (!ParamName.IsEmpty() && IsValid())
-	{
-		try
+		if (Column.isNull())
 		{
-			StatementPtr->bind(TCHAR_TO_UTF8(*ParamName), Value);
+			bValid = false;
 		}
-		catch (SQLite::Exception& e)
+		else
 		{
-			(void)e;
-			UE_LOG(LogSmoothSqlite, Error, L"Failed to bind value to param %s", *ParamName);
+			if (Data == nullptr)
+				FMemory::Memcpy(Data, Column.getBlob(), Column.size() );
 		}
 	}
-}
+
+	const void* GetData() const {return Data;}
+
+	bool IsValid() const {return bValid;}
+
+	~FSqliteColumn()
+	{
+		if (Data != nullptr)
+			FMemory::Free(Data);
+	}
+};
+
+// template<>
+// struct TStructOpsTypeTraits<FSqliteColumn> : TStructOpsTypeTraitsBase2<FSqliteColumn>
+// {
+// 	enum
+// 	{
+// 		WithCopy = true
+// 	};
+// };
+
+
+// USTRUCT(BlueprintType)
+// struct FDbConnectionHandle
+// {
+// 	GENERATED_BODY()
+//
+// 	friend struct FDbStatement;
+// 	
+// 	FDbConnectionHandle()
+// 		: ConnectionPtr(nullptr)
+// 	{}
+// 	
+// 	FDbConnectionHandle(const FSqliteDBConnectionParms& Params);
+//
+// 	
+// 	bool BeginTransaction();
+// 	bool CommitTransaction();
+// 	bool RollbackTransaction();
+//
+// 	bool Execute(const FString& Query);
+// 	FSqliteColumn Fetch(const FString& Query);
+//
+// 	struct FDbStatement Query(const FString& Query);
+//
+// 	bool IsValid() const {return ConnectionPtr.IsValid();}
+// 	bool IsValidTransaction() const {return TransactionPtr.IsValid();}
+//
+// 	void Invalidate()
+// 	{
+// 		ConnectionPtr.Reset();
+// 		TransactionPtr.Reset();
+// 	}
+//
+// 	UPROPERTY(BlueprintReadOnly, Category="DbHandle")
+// 	FSqliteDBConnectionParms ConnectionParms;
+// 	
+// private:
+// 	TSharedPtr<SQLite::Database> ConnectionPtr;
+// 	TSharedPtr<SQLite::Transaction> TransactionPtr;
+// };
+//
+//
+// USTRUCT(BlueprintType)
+// struct FDbStatement
+// {
+// 	GENERATED_BODY()
+//
+// 	FDbStatement()
+// 		: StatementPtr(nullptr) {}
+//
+// 	FDbStatement(const FDbConnectionHandle& Handle, const FString& Query);
+// 	
+// 	int32 Execute();
+// 	bool Fetch();
+//
+// 	void ClearBinds();
+// 	void Reset();
+//
+// 	template<class T>
+// 	void Bind(const FString& ParamName, const T& Value);
+// 	
+// 	TOptional<SQLite::Column> Get(const FString& Column);
+// 	TOptional<SQLite::Column> Get(int32 Index);
+//
+// 	SQLite::Statement* Raw() const;
+//
+// 	bool IsValid() const {return StatementPtr.IsValid(); }
+// 	bool IsDone() const {return IsValid() ? StatementPtr->isDone() : true;}
+//
+// 	void Invalidate() {StatementPtr.Reset();}
+//
+// private:
+// 	TSharedPtr<SQLite::Statement> StatementPtr;
+// };
+//
+//
+// template <class T>
+// void FDbStatement::Bind(const FString& ParamName, const T& Value)
+// {
+// 	if (!ParamName.IsEmpty() && IsValid())
+// 	{
+// 		try
+// 		{
+// 			StatementPtr->bind(TCHAR_TO_UTF8(*ParamName), Value);
+// 		}
+// 		catch (SQLite::Exception& e)
+// 		{
+// 			(void)e;
+// 			UE_LOG(LogSmoothSqlite, Error, L"Failed to bind value to param %s", *ParamName);
+// 		}
+// 	}
+// }
 

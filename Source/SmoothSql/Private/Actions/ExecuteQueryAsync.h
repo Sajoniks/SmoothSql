@@ -8,9 +8,9 @@
 #include "SQLiteCpp/Column.h"
 #include "ExecuteQueryAsync.generated.h"
 
-class USqliteStatement;
+class UDbStmt;
 
-DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FQueryResultOutputPin, FDbStatement, Statement);	
+DECLARE_DYNAMIC_MULTICAST_DELEGATE(FQueryResultOutputPin);	
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FQueryCompleteOutputPin);
 
 
@@ -30,7 +30,9 @@ protected:
 
 	static bool bActive;			///< If any async query is active
 	UObject* WorldContext;			///< WorldContext
-	FDbStatement Statement;	///< Ptr to current statement object
+
+	UPROPERTY()
+	UDbStmt* Stmt;	///< Ptr to current statement object
 	
 
 	FTimerHandle TimerHandle;		///< Query execute timer
@@ -44,7 +46,7 @@ public:
 	FQueryCompleteOutputPin Completed;
 	
 	UFUNCTION(BlueprintCallable, meta = (BlueprintInternalUseOnly = "true", WorldContext = "WorldContextObject"), Category = "SmoothSqlite|Query")
-	static UExecuteQueryAsync* ForEachResultAsync(UObject* WorldContextObject, const FDbStatement& Statement);
+	static UExecuteQueryAsync* ForEachResultAsync(UObject* WorldContextObject, UDbStmt* Statement);
 
 	virtual void Activate() override;
 	virtual void BeginDestroy() override;
